@@ -46,7 +46,7 @@ Glfw::Glfw(std::string_view _title, uvec2 _size) {
 
 	// Convert any glfw error into an exception on the calling thread
 	glfwSetErrorCallback([](int code, char const* str) {
-		throw stx::runtime_error_fmt("GLFW error {}: {}", code, str);
+		throw stx::runtime_error_fmt("[GLFW] Error {}: {}", code, str);
 	});
 	glfwInit();
 
@@ -54,7 +54,8 @@ Glfw::Glfw(std::string_view _title, uvec2 _size) {
 
 	// Create the window
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	m_window = glfwCreateWindow(_size.x(), _size.y(), std::string(_title).c_str(), nullptr, nullptr);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	m_window = glfwCreateWindow(int(_size.x()), int(_size.y()), std::string(_title).c_str(), nullptr, nullptr);
 	ASSUME(m_window);
 
 	L_INFO("Window {} created at {}x{}", _title, _size.x(), _size.y());
@@ -100,6 +101,13 @@ void Glfw::initConsole() {
 
 	// Set console encoding to UTF-8
 	SetConsoleOutputCP(65001);
+
+	// Enable ANSI color code support
+	auto out = GetStdHandle(STD_OUTPUT_HANDLE);
+	auto mode = 0ul;
+	GetConsoleMode(out, &mode);
+	mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	SetConsoleMode(out, mode);
 
 }
 
