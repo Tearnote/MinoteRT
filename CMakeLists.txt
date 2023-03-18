@@ -23,7 +23,30 @@ add_link_options("$<$<CONFIG:Release>:/OPT:ICF>")       # ^
 # Communicate build type to the project
 add_compile_definitions("BUILD_TYPE=$<$<CONFIG:Debug>:BUILD_DEBUG>$<$<CONFIG:RelWithDebInfo>:BUILD_RELDEB>$<$<CONFIG:Release>:BUILD_RELEASE>")
 
+### Dependencies
+include(cmake/Dependencies.cmake)
+
 ### Main executable
 add_executable(MinoteRT
-        src/main.cpp)
+	src/sys/glfw.hpp src/sys/glfw.cpp
+	src/util/service.hpp
+	src/stx/concepts.hpp
+	src/stx/except.hpp
+	src/stx/ranges.hpp
+	src/stx/verify.hpp
+	src/stx/time.hpp
+	src/config.hpp
+	src/types.hpp
+	src/math.hpp
+	src/main.cpp
+	src/log.hpp src/log.cpp
+)
 target_include_directories(MinoteRT PRIVATE src) # All includes start from src as root
+
+target_link_options(MinoteRT PRIVATE "/SUBSYSTEM:WINDOWS")
+target_link_libraries(MinoteRT PRIVATE winmm)
+
+target_link_libraries(MinoteRT PRIVATE fmtlog)
+target_link_libraries(MinoteRT PRIVATE assert)
+target_link_libraries(MinoteRT PRIVATE volk)
+target_link_libraries(MinoteRT PRIVATE glfw)
