@@ -28,6 +28,9 @@ public:
 	// Returns true if window close is requested and the application should quit
 	auto isClosing() -> bool;
 
+	// Return the raw window handle, useful for Vulkan surface creation
+	auto windowHandle() -> GLFWwindow* { return m_window; }
+
 	// Not movable, not copyable
 	Glfw(Glfw const&) = delete;
 	auto operator=(Glfw const&) -> Glfw& = delete;

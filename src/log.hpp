@@ -1,7 +1,9 @@
 #pragma once
 
 #include <string_view>
+
 #include <fmtlog.h>
+
 #include "types.hpp"
 
 namespace minote {

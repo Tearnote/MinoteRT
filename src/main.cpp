@@ -7,6 +7,7 @@
 #include <chrono>
 
 #include "log.hpp"
+#include "sys/vulkan.hpp"
 #include "sys/glfw.hpp"
 
 auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
@@ -20,6 +21,7 @@ auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 		   AppVersion[0], AppVersion[1], AppVersion[2]);
 
 	auto glfw = sys::s_glfw.provide("MinoteRT");
+	auto vulkan = sys::s_vulkan.provide();
 
 	while(!sys::s_glfw->isClosing()) {
 		sys::s_glfw->poll();

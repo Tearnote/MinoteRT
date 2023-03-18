@@ -9,6 +9,14 @@
 #include "types.hpp"
 #include "stx/concepts.hpp"
 
+// Avoid collisions with common min/max macros
+#ifdef min
+#undef min
+#endif //min
+#ifdef max
+#undef max
+#endif //max
+
 namespace minote {
 
 //=== Constants
