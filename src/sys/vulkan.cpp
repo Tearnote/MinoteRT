@@ -2,8 +2,6 @@
 
 #include "config.hpp"
 
-#include <utility>
-
 #include <volk.h> // Order is important
 #include <GLFW/glfw3.h>
 
@@ -49,15 +47,13 @@ VKAPI_ATTR auto VKAPI_CALL debugCallback(
 }
 #endif
 
-Vulkan::Vulkan() {
-
-	instance = createInstance();
-	surface = createSurface(instance);
-	physicalDevice = selectPhysicalDevice(instance, surface);
-	device = createDevice(physicalDevice);
-	auto queues = retrieveQueues(device);
-//	context.emplace(std::move(createContext(instance, device, physicalDevice, queues)));
-//	swapchain = context->add_swapchain(createSwapchain(_window.size()));
+Vulkan::Vulkan():
+	instance(createInstance()),
+	surface(createSurface(*instance)),
+	physicalDevice(selectPhysicalDevice(*instance, surface)),
+	device(createDevice(physicalDevice)),
+	context(createContext(*instance, *device, physicalDevice, retrieveQueues(*device))),
+	swapchain(context.add_swapchain(createSwapchain(sys::s_glfw->windowSize()))) {
 
 	L_INFO("Vulkan initialized");
 
@@ -65,19 +61,13 @@ Vulkan::Vulkan() {
 
 Vulkan::~Vulkan() {
 
-//	context->wait_idle();
-//	context.reset();
-	vkb::destroy_device(device);
-	vkDestroySurfaceKHR(instance.instance, surface, nullptr);
-	vkb::destroy_instance(instance);
-
-	L_INFO("Vulkan cleaned up");
+	context.wait_idle();
 
 }
-/*
+
 auto Vulkan::createSwapchain(uvec2 _size, VkSwapchainKHR _old) -> vuk::Swapchain {
 
-	auto vkbswapchainResult = vkb::SwapchainBuilder(device)
+	auto vkbswapchainResult = vkb::SwapchainBuilder(*device)
 		.set_old_swapchain(_old)
 		.set_desired_extent(_size.x(), _size.y())
 		.set_desired_format({
@@ -104,14 +94,14 @@ auto Vulkan::createSwapchain(uvec2 _size, VkSwapchainKHR _old) -> vuk::Swapchain
 	auto imgs = vkbswapchain.get_images();
 	auto ivs = vkbswapchain.get_image_views();
 	for (auto& img: *imgs)
-		vuksw.images.emplace_back(img);
+		vuksw.images.emplace_back(vuk::Image{img, nullptr});
 	for (auto& iv: *ivs)
 		vuksw.image_views.emplace_back().payload = iv;
 	return vuksw;
 
 }
-*/
-auto Vulkan::createInstance() -> vkb::Instance {
+
+auto Vulkan::createInstance() -> RAIIInstance {
 
 	auto instanceResult = vkb::InstanceBuilder()
 #ifdef VK_VALIDATION
@@ -135,20 +125,23 @@ auto Vulkan::createInstance() -> vkb::Instance {
 		.build();
 	if (!instanceResult)
 		throw stx::runtime_error_fmt("Failed to create a Vulkan instance: {}", instanceResult.error().message());
-	auto instance = instanceResult.value();
+	auto instance = RAIIInstance(new vkb::Instance(instanceResult.value()));
 
-	volkInitializeCustom(instance.fp_vkGetInstanceProcAddr);
-	volkLoadInstanceOnly(instance.instance);
+	volkInitializeCustom(instance->fp_vkGetInstanceProcAddr);
+	volkLoadInstanceOnly(instance->instance);
 
 	L_DEBUG("Vulkan instance created");
 	return instance;
 
 }
 
-auto Vulkan::createSurface(vkb::Instance& _instance) -> VkSurfaceKHR {
+auto Vulkan::createSurface(vkb::Instance& _instance) -> RAIISurface {
 
-	auto result = VkSurfaceKHR();
-	glfwCreateWindowSurface(_instance.instance, s_glfw->windowHandle(), nullptr, &result);
+	auto result = RAIISurface{
+		.surface = nullptr,
+		.instance = _instance,
+	};
+	glfwCreateWindowSurface(_instance, s_glfw->windowHandle(), nullptr, &result.surface);
 	return result;
 
 }
@@ -160,16 +153,23 @@ auto Vulkan::selectPhysicalDevice(vkb::Instance& _instance, VkSurfaceKHR _surfac
 		.robustBufferAccess = VK_TRUE,
 #endif
 		.shaderStorageImageWriteWithoutFormat = VK_TRUE,
+		.shaderInt64 = VK_TRUE,
 	};
 	auto physicalDeviceVulkan11Features = VkPhysicalDeviceVulkan11Features{
 		.shaderDrawParameters = VK_TRUE,
 	};
 	auto physicalDeviceVulkan12Features = VkPhysicalDeviceVulkan12Features{
+		.shaderSampledImageArrayNonUniformIndexing = VK_TRUE, // vuk requirement
+		.descriptorBindingUpdateUnusedWhilePending = VK_TRUE, // vuk requirement
+		.descriptorBindingPartiallyBound = VK_TRUE, // vuk requirement
+		.descriptorBindingVariableDescriptorCount = VK_TRUE, // vuk requirement
+		.runtimeDescriptorArray = VK_TRUE, // vuk requirement
 		.hostQueryReset = VK_TRUE, // vuk requirement
 		.timelineSemaphore = VK_TRUE, // vuk requirement
 		.bufferDeviceAddress = VK_TRUE, // vuk requirement
 		.vulkanMemoryModel = VK_TRUE, // general performance improvement
 		.vulkanMemoryModelDeviceScope = VK_TRUE, // general performance improvement
+		.shaderOutputLayer = VK_TRUE, // vuk requirement
 	};
 	auto physicalDeviceVulkan13Features = VkPhysicalDeviceVulkan13Features{
 		.computeFullSubgroups = VK_TRUE,
@@ -209,14 +209,14 @@ auto Vulkan::selectPhysicalDevice(vkb::Instance& _instance, VkSurfaceKHR _surfac
 
 }
 
-auto Vulkan::createDevice(vkb::PhysicalDevice& _physicalDevice) -> vkb::Device {
+auto Vulkan::createDevice(vkb::PhysicalDevice& _physicalDevice) -> RAIIDevice {
 
 	auto deviceResult = vkb::DeviceBuilder(_physicalDevice).build();
 	if (!deviceResult)
 		throw stx::runtime_error_fmt("Failed to create Vulkan device: {}", deviceResult.error().message());
-	auto device = deviceResult.value();
+	auto device = RAIIDevice(new vkb::Device(deviceResult.value()));
 
-	volkLoadDevice(device.device);
+	volkLoadDevice(*device);
 
 	L_DEBUG("Vulkan device created");
 	return device;
@@ -249,13 +249,13 @@ auto Vulkan::retrieveQueues(vkb::Device& _device) -> Queues {
 	return result;
 
 }
-/*
+
 auto Vulkan::createContext(vkb::Instance& _instance, vkb::Device& _device,
 	vkb::PhysicalDevice& _physicalDevice, Queues const& _queues) -> vuk::Context {
 
 	return vuk::Context(vuk::ContextCreateParameters{
-		.instance =                    _instance.instance,
-		.device =                      _device.device,
+		.instance =                    _instance,
+		.device =                      _device,
 		.physical_device =             _physicalDevice.physical_device,
 		.graphics_queue =              _queues.graphics,
 		.graphics_queue_family_index = _queues.graphicsFamilyIndex,
@@ -263,8 +263,119 @@ auto Vulkan::createContext(vkb::Instance& _instance, vkb::Device& _device,
 		.compute_queue_family_index =  _queues.computeFamilyIndex,
 		.transfer_queue =              _queues.transfer,
 		.transfer_queue_family_index = _queues.transferFamilyIndex,
+		.pointers = vuk::ContextCreateParameters::FunctionPointers{
+			// Kill me now
+			.vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+			.vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+			.vkCmdBindDescriptorSets = vkCmdBindDescriptorSets,
+			.vkCmdBindIndexBuffer = vkCmdBindIndexBuffer,
+			.vkCmdBindPipeline = vkCmdBindPipeline,
+			.vkCmdBindVertexBuffers = vkCmdBindVertexBuffers,
+			.vkCmdBlitImage = vkCmdBlitImage,
+			.vkCmdClearColorImage = vkCmdClearColorImage,
+			.vkCmdClearDepthStencilImage = vkCmdClearDepthStencilImage,
+			.vkCmdCopyBuffer = vkCmdCopyBuffer,
+			.vkCmdCopyBufferToImage = vkCmdCopyBufferToImage,
+			.vkCmdCopyImageToBuffer = vkCmdCopyImageToBuffer,
+			.vkCmdFillBuffer = vkCmdFillBuffer,
+			.vkCmdUpdateBuffer = vkCmdUpdateBuffer,
+			.vkCmdResolveImage = vkCmdResolveImage,
+			.vkCmdPipelineBarrier = vkCmdPipelineBarrier,
+			.vkCmdWriteTimestamp = vkCmdWriteTimestamp,
+			.vkCmdDraw = vkCmdDraw,
+			.vkCmdDrawIndexed = vkCmdDrawIndexed,
+			.vkCmdDrawIndexedIndirect = vkCmdDrawIndexedIndirect,
+			.vkCmdDispatch = vkCmdDispatch,
+			.vkCmdDispatchIndirect = vkCmdDispatchIndirect,
+			.vkCmdPushConstants = vkCmdPushConstants,
+			.vkCmdSetViewport = vkCmdSetViewport,
+			.vkCmdSetScissor = vkCmdSetScissor,
+			.vkCmdSetLineWidth = vkCmdSetLineWidth,
+			.vkCmdSetDepthBias = vkCmdSetDepthBias,
+			.vkCmdSetBlendConstants = vkCmdSetBlendConstants,
+			.vkCmdSetDepthBounds = vkCmdSetDepthBounds,
+			.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
+			.vkCreateFramebuffer = vkCreateFramebuffer,
+			.vkDestroyFramebuffer = vkDestroyFramebuffer,
+			.vkCreateCommandPool = vkCreateCommandPool,
+			.vkResetCommandPool = vkResetCommandPool,
+			.vkDestroyCommandPool = vkDestroyCommandPool,
+			.vkAllocateCommandBuffers = vkAllocateCommandBuffers,
+			.vkBeginCommandBuffer = vkBeginCommandBuffer,
+			.vkEndCommandBuffer = vkEndCommandBuffer,
+			.vkFreeCommandBuffers = vkFreeCommandBuffers,
+			.vkCreateDescriptorPool = vkCreateDescriptorPool,
+			.vkResetDescriptorPool = vkResetDescriptorPool,
+			.vkDestroyDescriptorPool = vkDestroyDescriptorPool,
+			.vkAllocateDescriptorSets = vkAllocateDescriptorSets,
+			.vkUpdateDescriptorSets = vkUpdateDescriptorSets,
+			.vkCreateGraphicsPipelines = vkCreateGraphicsPipelines,
+			.vkCreateComputePipelines = vkCreateComputePipelines,
+			.vkDestroyPipeline = vkDestroyPipeline,
+			.vkCreateQueryPool = vkCreateQueryPool,
+			.vkGetQueryPoolResults = vkGetQueryPoolResults,
+			.vkDestroyQueryPool = vkDestroyQueryPool,
+			.vkCreatePipelineCache = vkCreatePipelineCache,
+			.vkGetPipelineCacheData = vkGetPipelineCacheData,
+			.vkDestroyPipelineCache = vkDestroyPipelineCache,
+			.vkCreateRenderPass = vkCreateRenderPass,
+			.vkCmdBeginRenderPass = vkCmdBeginRenderPass,
+			.vkCmdNextSubpass = vkCmdNextSubpass,
+			.vkCmdEndRenderPass = vkCmdEndRenderPass,
+			.vkDestroyRenderPass = vkDestroyRenderPass,
+			.vkCreateSampler = vkCreateSampler,
+			.vkDestroySampler = vkDestroySampler,
+			.vkCreateShaderModule = vkCreateShaderModule,
+			.vkDestroyShaderModule = vkDestroyShaderModule,
+			.vkCreateImageView = vkCreateImageView,
+			.vkDestroyImageView = vkDestroyImageView,
+			.vkCreateDescriptorSetLayout = vkCreateDescriptorSetLayout,
+			.vkDestroyDescriptorSetLayout = vkDestroyDescriptorSetLayout,
+			.vkCreatePipelineLayout = vkCreatePipelineLayout,
+			.vkDestroyPipelineLayout = vkDestroyPipelineLayout,
+			.vkCreateFence = vkCreateFence,
+			.vkWaitForFences = vkWaitForFences,
+			.vkDestroyFence = vkDestroyFence,
+			.vkCreateSemaphore = vkCreateSemaphore,
+			.vkWaitSemaphores = vkWaitSemaphores,
+			.vkDestroySemaphore = vkDestroySemaphore,
+			.vkQueueSubmit = vkQueueSubmit,
+			.vkDeviceWaitIdle = vkDeviceWaitIdle,
+			.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
+			.vkAllocateMemory = vkAllocateMemory,
+			.vkFreeMemory = vkFreeMemory,
+			.vkMapMemory = vkMapMemory,
+			.vkUnmapMemory = vkUnmapMemory,
+			.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges,
+			.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges,
+			.vkBindBufferMemory = vkBindBufferMemory,
+			.vkBindImageMemory = vkBindImageMemory,
+			.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements,
+			.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements,
+			.vkCreateBuffer = vkCreateBuffer,
+			.vkDestroyBuffer = vkDestroyBuffer,
+			.vkCreateImage = vkCreateImage,
+			.vkDestroyImage = vkDestroyImage,
+			.vkGetPhysicalDeviceProperties2 = vkGetPhysicalDeviceProperties2,
+			.vkGetBufferDeviceAddress = vkGetBufferDeviceAddress,
+			.vkCmdDrawIndexedIndirectCount = vkCmdDrawIndexedIndirectCount,
+			.vkResetQueryPool = vkResetQueryPool,
+			.vkAcquireNextImageKHR = vkAcquireNextImageKHR,
+			.vkQueuePresentKHR = vkQueuePresentKHR,
+			.vkDestroySwapchainKHR = vkDestroySwapchainKHR,
+			.vkSetDebugUtilsObjectNameEXT = vkSetDebugUtilsObjectNameEXT,
+			.vkCmdBeginDebugUtilsLabelEXT = vkCmdBeginDebugUtilsLabelEXT,
+			.vkCmdEndDebugUtilsLabelEXT = vkCmdEndDebugUtilsLabelEXT,
+			.vkCmdBuildAccelerationStructuresKHR = vkCmdBuildAccelerationStructuresKHR,
+			.vkGetAccelerationStructureBuildSizesKHR = vkGetAccelerationStructureBuildSizesKHR,
+			.vkCmdTraceRaysKHR = vkCmdTraceRaysKHR,
+			.vkCreateAccelerationStructureKHR = vkCreateAccelerationStructureKHR,
+			.vkDestroyAccelerationStructureKHR = vkDestroyAccelerationStructureKHR,
+			.vkGetRayTracingShaderGroupHandlesKHR = vkGetRayTracingShaderGroupHandlesKHR,
+			.vkCreateRayTracingPipelinesKHR = vkCreateRayTracingPipelinesKHR,
+		},
 	});
 
 }
-*/
+
 }

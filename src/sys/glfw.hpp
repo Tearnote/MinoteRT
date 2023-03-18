@@ -31,6 +31,8 @@ public:
 	// Return the raw window handle, useful for Vulkan surface creation
 	auto windowHandle() -> GLFWwindow* { return m_window; }
 
+	auto windowSize() -> uvec2;
+
 	// Not movable, not copyable
 	Glfw(Glfw const&) = delete;
 	auto operator=(Glfw const&) -> Glfw& = delete;

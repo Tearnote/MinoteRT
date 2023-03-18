@@ -115,4 +115,13 @@ auto Glfw::isClosing() -> bool {
 
 }
 
+auto Glfw::windowSize() -> uvec2 {
+
+	auto w = 0;
+	auto h = 0;
+	glfwGetFramebufferSize(m_window, &w, &h);
+	return uvec2{uint(w), uint(h)};
+
+}
+
 }

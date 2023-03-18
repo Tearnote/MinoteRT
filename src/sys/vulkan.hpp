@@ -4,10 +4,11 @@
 
 #include <volk.h> // Order is important
 #include <VkBootstrap.h>
-//#include <vuk/Context.hpp>
+#include <vuk/Context.hpp>
 
 #include "types.hpp"
 #include "math.hpp"
+#include "log.hpp"
 #include "util/service.hpp"
 
 namespace minote::sys {
@@ -15,17 +16,33 @@ namespace minote::sys {
 // Handling of the elementary Vulkan objects
 class Vulkan {
 
+	// RAII wrappers for orderly construction and destruction
+	struct RAIISurface {
+		VkSurfaceKHR surface;
+		vkb::Instance& instance;
+		operator VkSurfaceKHR() const { return surface; }
+		~RAIISurface() { vkDestroySurfaceKHR(instance, surface, nullptr); }
+	};
+	using RAIIInstance = std::unique_ptr<vkb::Instance, decltype([](auto* i) {
+		vkb::destroy_instance(*i);
+		delete i;
+	})>;
+	using RAIIDevice = std::unique_ptr<vkb::Device, decltype([](auto* d) {
+		vkb::destroy_device(*d);
+		delete d;
+	})>;
+
 public:
 
-	vkb::Instance instance;
-	VkSurfaceKHR surface;
+	RAIIInstance instance;
+	RAIISurface surface;
 	vkb::PhysicalDevice physicalDevice;
-	vkb::Device device;
-//	vuk::SwapchainRef swapchain;
-//	std::optional<vuk::Context> context;
+	RAIIDevice device;
+	vuk::Context context;
+	vuk::SwapchainRef swapchain;
 
 	// Create a swapchain object, optionally reusing resources from an existing one.
-//	auto createSwapchain(uvec2 size, VkSwapchainKHR old = VK_NULL_HANDLE) -> vuk::Swapchain;
+	auto createSwapchain(uvec2 size, VkSwapchainKHR old = VK_NULL_HANDLE) -> vuk::Swapchain;
 
 	// Not movable, not copyable
 	Vulkan(Vulkan const&) = delete;
@@ -47,12 +64,12 @@ private:
 	Vulkan();
 	~Vulkan();
 
-	static auto createInstance() -> vkb::Instance;
-	static auto createSurface(vkb::Instance&) -> VkSurfaceKHR;
+	static auto createInstance() -> RAIIInstance;
+	static auto createSurface(vkb::Instance&) -> RAIISurface;
 	static auto selectPhysicalDevice(vkb::Instance&, VkSurfaceKHR) -> vkb::PhysicalDevice;
-	static auto createDevice(vkb::PhysicalDevice&) -> vkb::Device;
+	static auto createDevice(vkb::PhysicalDevice&) -> RAIIDevice;
 	static auto retrieveQueues(vkb::Device&) -> Queues;
-//	static auto createContext(vkb::Instance&, vkb::Device&, vkb::PhysicalDevice&, Queues const&) -> vuk::Context;
+	static auto createContext(vkb::Instance&, vkb::Device&, vkb::PhysicalDevice&, Queues const&) -> vuk::Context;
 
 };
 
