@@ -46,6 +46,7 @@ target_include_directories(MinoteRT PRIVATE src) # All includes start from src a
 target_link_options(MinoteRT PRIVATE "/SUBSYSTEM:WINDOWS")
 target_link_libraries(MinoteRT PRIVATE winmm)
 
+target_link_libraries(MinoteRT PRIVATE vk-bootstrap)
 target_link_libraries(MinoteRT PRIVATE fmtlog)
 target_link_libraries(MinoteRT PRIVATE assert)
 target_link_libraries(MinoteRT PRIVATE volk)

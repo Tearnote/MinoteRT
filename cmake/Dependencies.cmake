@@ -42,3 +42,8 @@ target_include_directories(fmtlog INTERFACE ${fmtlog_SOURCE_DIR})
 target_compile_definitions(fmtlog INTERFACE FMTLOG_HEADER_ONLY)
 target_compile_definitions(fmtlog INTERFACE FMT_NOEXCEPT=noexcept)
 target_link_libraries(fmtlog INTERFACE fmt::fmt)
+
+FetchContent_Declare(vk-bootstrap
+	GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap
+	GIT_TAG 8e61b2d81c3f5f84339735085ff5651f71bbe1e7)
+FetchContent_MakeAvailable(vk-bootstrap)

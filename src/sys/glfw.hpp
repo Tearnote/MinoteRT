@@ -19,6 +19,12 @@ public:
 	// Create a console window and bind to standard input and output
 	static void initConsole();
 
+	// Set current thread's name to the provided string. Does nothing if THREAD_DEBUG is not set
+	static void setThreadName(std::string_view);
+
+	// Call this as often as possible to process system and input events
+	void poll();
+
 	// Returns true if window close is requested and the application should quit
 	auto isClosing() -> bool;
 

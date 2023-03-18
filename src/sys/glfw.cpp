@@ -1,5 +1,7 @@
 #include "sys/glfw.hpp"
 
+#include "config.hpp"
+
 #include <stdexcept>
 #include <string>
 #ifndef NOMINMAX
@@ -8,6 +10,7 @@
 // WIN32_LEAN_AND_MEAN would remove parts we actually need here
 #include <windows.h>
 #include <timeapi.h>
+#include <processthreadsapi.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <io.h>
@@ -23,6 +26,15 @@
 #include "stx/time.hpp"
 
 namespace minote::sys {
+
+void Glfw::setThreadName(std::string_view _name) {
+
+#ifdef THREAD_DEBUG
+	auto lname = std::wstring(_name.begin(), _name.end());
+	SetThreadDescription(GetCurrentThread(), lname.c_str());
+#endif //THREAD_DEBUG
+
+}
 
 Glfw::Glfw(std::string_view _title, uvec2 _size) {
 
@@ -88,6 +100,12 @@ void Glfw::initConsole() {
 
 	// Set console encoding to UTF-8
 	SetConsoleOutputCP(65001);
+
+}
+
+void Glfw::poll() {
+
+	glfwPollEvents();
 
 }
 
