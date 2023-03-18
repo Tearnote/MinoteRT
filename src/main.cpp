@@ -3,30 +3,40 @@
 #include <exception>
 #include <iostream>
 #include <cstdlib>
-#include <thread>
-#include <chrono>
 
 #include "log.hpp"
 #include "sys/vulkan.hpp"
 #include "sys/glfw.hpp"
+#include "gfx/renderer.hpp"
 
 auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 
 	using namespace minote; // main itself cannot be namespaced
 
+	// Initializing basic output
 	sys::Glfw::setThreadName("main");
 	sys::Glfw::initConsole();
 	Log::init(Log_p, LOG_LEVEL);
 	L_INFO("Starting up {} {}.{}.{}", AppTitle,
 		   AppVersion[0], AppVersion[1], AppVersion[2]);
 
+	// Initializing subsystems
 	auto glfw = sys::s_glfw.provide("MinoteRT");
 	auto vulkan = sys::s_vulkan.provide();
+	auto renderer = gfx::Renderer();
 
+	// Main loop
 	while(!sys::s_glfw->isClosing()) {
+
+		// Handle user and system events
 		sys::s_glfw->poll();
-		std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Relinquish timeslice
+
+		// Draw the next frame
+		renderer.draw();
+
 	}
+
+	// Clean shutdown
 	return EXIT_SUCCESS;
 
 } catch (std::exception& e) {

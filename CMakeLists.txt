@@ -28,6 +28,7 @@ include(cmake/Dependencies.cmake)
 
 ### Main executable
 add_executable(MinoteRT
+	src/gfx/renderer.hpp src/gfx/renderer.cpp
 	src/sys/vulkan.hpp src/sys/vulkan.cpp
 	src/sys/glfw.hpp src/sys/glfw.cpp
 	src/util/service.hpp
