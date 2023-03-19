@@ -100,6 +100,5 @@ void main() {
 	colorOut /= Samples;
 
 	// Write output
-	colorOut = sqrt(colorOut);
 	imageStore(i_dst, ivec2(Gid), vec4(colorOut, 1));
 }

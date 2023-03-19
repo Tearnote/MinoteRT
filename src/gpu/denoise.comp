@@ -22,7 +22,7 @@ vec4 smartDeNoise(sampler2D tex, vec2 uv, float sigma, float kSigma, float thres
     float invThresholdSqx2 = .5 / (threshold * threshold);     // 1.0 / (sigma^2 * 2.0)
     float invThresholdSqrt2PI = INV_SQRT_OF_2PI / threshold;   // 1.0 / (sqrt(2*PI) * sigma)
 
-    vec4 centrPx = texture(tex,uv);
+    vec4 centrPx = sqrt(texture(tex,uv));
 
     float zBuff = 0.0;
     vec4 aBuff = vec4(0.0);
@@ -35,7 +35,7 @@ vec4 smartDeNoise(sampler2D tex, vec2 uv, float sigma, float kSigma, float thres
 
             float blurFactor = exp( -dot(d , d) * invSigmaQx2 ) * invSigmaQx2PI;
 
-            vec4 walkPx =  texture(tex,uv+d/size);
+            vec4 walkPx =  sqrt(texture(tex,uv+d/size));
 
             vec4 dC = walkPx-centrPx;
             float deltaFactor = exp( -dot(dC, dC) * invThresholdSqx2) * invThresholdSqrt2PI * blurFactor;
@@ -44,7 +44,7 @@ vec4 smartDeNoise(sampler2D tex, vec2 uv, float sigma, float kSigma, float thres
             aBuff += deltaFactor*walkPx;
         }
     }
-    return aBuff/zBuff;
+    return pow(aBuff/zBuff, vec4(2));
 }
 
 void main() {
