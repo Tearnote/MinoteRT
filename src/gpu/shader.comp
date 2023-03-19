@@ -87,7 +87,7 @@ void main() {
 
 	// Rendering
 	const uint Samples = 32;
-	const uint MaxBounces = 16;
+	const uint MaxBounces = 4;
 	vec3 colorOut = {0, 0, 0};
 	for (uint i = 0; i < Samples; i += 1) {
 		// Camera ray
