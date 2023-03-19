@@ -26,7 +26,7 @@ vec3 skyColor(Ray ray) {
 	return (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
 }
 
-vec3 traceRay(Ray ray, uint maxDepth, uint sampleId) {
+vec3 traceRay(Ray ray, uint maxDepth, inout uint rngState) {
 
 	vec3 color = {1, 1, 1};
 	for (uint i = 0; i < maxDepth; i += 1) {
@@ -48,7 +48,7 @@ vec3 traceRay(Ray ray, uint maxDepth, uint sampleId) {
 			color *= closestHit.albedo;
 			ray = Ray(
 				closestHit.position + closestHit.normal * 0.0001,
-				closestHit.normal + randomSpherePoint(random3(vec3(gl_GlobalInvocationID.x * sampleId, gl_GlobalInvocationID.y * sampleId, C.FrameCounter)))
+				closestHit.normal + randomSpherePoint(vec3(randomFloat(rngState), randomFloat(rngState), randomFloat(rngState)))
 			);
 		} else {
 			color *= skyColor(ray);
@@ -61,6 +61,7 @@ vec3 traceRay(Ray ray, uint maxDepth, uint sampleId) {
 void main() {
 	// Input
 	const uvec2 Gid = gl_GlobalInvocationID.xy;
+	uint rngState = (Gid.x * 1973 + Gid.y * 9277 + C.FrameCounter * 26699) | 1;
 
 	// Output
 	const uvec2 DstSize = uvec2(imageSize(i_dst));
@@ -91,11 +92,12 @@ void main() {
 	vec3 colorOut = {0, 0, 0};
 	for (uint i = 0; i < Samples; i += 1) {
 		// Camera ray
-		vec2 suv = uv + (random2(fract(uv * vec2(i + C.FrameCounter, C.FrameCounter))) - 0.5) * Pitch;
+		vec2 randomOffset = {randomFloat(rngState), randomFloat(rngState)};
+		vec2 suv = uv + (randomOffset - 0.5) * Pitch;
 		Ray ray = {vec3(0), LowerLeftCorner + suv.x * HorizontalSpan + suv.y * VerticalSpan};
 		ray.origin = (C.View * vec4(ray.origin, 1)).xyz;
 		ray.direction = (C.View * vec4(ray.direction, 0)).xyz;
-		colorOut += traceRay(ray, MaxBounces, i);
+		colorOut += traceRay(ray, MaxBounces, rngState);
 	}
 	colorOut /= Samples;
 

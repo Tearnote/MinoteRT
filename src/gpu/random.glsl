@@ -17,16 +17,17 @@ vec3 randomSpherePoint(vec3 rand) {
     return vec3(x, y, z);
 }
 
-vec2 random2(vec2 p) {
-    vec3 p3 = fract(p.xyx * RandomScale3);
-    p3 += dot(p3, p3.yzx + 19.19);
-    return fract((p3.xx+p3.yz)*p3.zy);
+uint xorshift(inout uint state) {
+    uint x = state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 15;
+    state = x;
+    return x;
 }
 
-vec3 random3(vec3 p) {
-    p = fract(p * RandomScale3);
-    p += dot(p, p.yxz+19.19);
-    return fract((p.xxy + p.yzz)*p.zyx);
+float randomFloat(inout uint state) {
+    return (xorshift(state) & 0xFFFFFFu) / 16777216.0f;
 }
 
 #endif //RANDOM_GLSL
