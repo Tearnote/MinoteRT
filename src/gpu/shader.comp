@@ -6,21 +6,104 @@ layout(local_size_x = 8, local_size_y = 8) in;
 
 layout(binding = 0) restrict uniform image2D i_dst;
 
+#define Color vec3
+#define Point vec3
+#define Vector vec3
+
+struct Ray {
+	Point origin;
+	Vector direction;
+};
+
+struct Sphere {
+	Point center;
+	float radius;
+};
+
+struct Intersection {
+	float t;
+	Point position;
+	Vector normal;
+};
+
+Point rayAt(Ray ray, float t) {
+	return ray.origin + ray.direction * t;
+}
+
+Color skyColor(Ray ray) {
+	Vector ndir = normalize(ray.direction);
+	float t = 0.5 * (ndir.z + 1.0);
+	return (1.0 - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0);
+}
+
+Intersection raySphereIntersect(Ray ray, Sphere sphere) {
+	Point oc = ray.origin - sphere.center;
+	float a = dot(ray.direction, ray.direction);
+	float half_b = dot(oc, ray.direction);
+	float c = dot(oc, oc) - sphere.radius * sphere.radius;
+	float discriminant = half_b * half_b - a * c;
+
+	Intersection result;
+	if (discriminant < 0) {
+		result.t = -1;
+	} else {
+		result.t = (-half_b - sqrt(discriminant)) / a;
+		result.position = rayAt(ray, result.t);
+		result.normal = normalize(result.position - sphere.center);
+	}
+	return result;
+}
+
+const uint SphereCount = 2;
+const Sphere Spheres[SphereCount] = {
+	{{0, -1,      0}, 0.5},
+	{{0, -1, -100.5}, 100}
+};
+
 void main() {
-	uvec2 gid = gl_GlobalInvocationID.xy;
-	vec4 colorOut = vec4(
-		(sin(float(gid.y) / 7.0) / 2.0 + 0.5) * (float(gid.x % 236) / 236.0),
-		cos(float(gid.y) / 8.0) * (gid.x / 12 % 2 == 0? 0.0 : 1.0),
-		fract(tan(float((gid.x + gid.y + gid.y % 4 + gid.x * 2 % 13) % 212) / 112.0)),
-		1.0
-	);
-	if (gid.x % 32 < 16 && gid.y % 32 < 16)
-		colorOut = colorOut.gbra;
-	if (gid.x % 32 >= 16 && gid.y % 32 < 16)
-		colorOut = colorOut.brga;
-	if (gid.x % 32 < 16 && gid.y % 32 >= 16)
-		colorOut = colorOut.rbga;
-	colorOut.g = fract(colorOut.g + (int(colorOut.r * 4) ^ int(colorOut.b * 5)));
-	colorOut = pow(colorOut, vec4(1.0 / 1.5));
-	imageStore(i_dst, ivec2(gid), colorOut);
+	// Input
+	const uvec2 Gid = gl_GlobalInvocationID.xy;
+
+	// Output
+	const uvec2 DstSize = uvec2(imageSize(i_dst));
+	const float AspectRatio = float(DstSize.x) / float(DstSize.y);
+
+	// Bounds check
+	if (any(greaterThanEqual(Gid, DstSize))) return;
+
+	// Viewport
+	const float ViewportHeight = 2;
+	const float ViewportWidth = ViewportHeight * AspectRatio;
+	const vec2 ViewportSize = {ViewportWidth, ViewportHeight};
+	const float FocalLength = 1;
+
+	// Camera
+	const Point Camera = {0, 0, 0};
+	const Vector HorizontalSpan = {ViewportSize.x, 0, 0};
+	const Vector VerticalSpan = {0, 0, ViewportSize.y};
+	const Point LowerLeftCorner = Camera - HorizontalSpan / 2 - VerticalSpan / 2 - Point(0, FocalLength, 0);
+
+	// Camera ray
+	vec2 uv = (vec2(Gid) + 0.5) / (DstSize - 1);
+	uv.y = 1.0 - uv.y;
+	Ray ray = {Camera, LowerLeftCorner + uv.x * HorizontalSpan + uv.y * VerticalSpan};
+
+	// Intersection test
+	Intersection closestHit;
+	closestHit.t = -1;
+	for (uint i = 0; i < SphereCount; i += 1) {
+		Intersection intersection = raySphereIntersect(ray, Spheres[i]);
+		if (intersection.t >= 0 && (intersection.t < closestHit.t || closestHit.t < 0))
+			closestHit = intersection;
+	}
+
+	// Shading
+	Color colorOut;
+	if (closestHit.t >= 0)
+		colorOut = closestHit.normal / 2 + 0.5;
+	else
+		colorOut = skyColor(ray);
+
+	// Write output
+	imageStore(i_dst, ivec2(Gid), vec4(colorOut, 1));
 }
