@@ -1193,7 +1193,7 @@ constexpr auto look(vec<3, Prec> _pos, vec<3, Prec> _dir, vec<3, Prec> _up) -> m
 	result[3][0] = -dot(s, _pos);
 	result[3][1] = -dot(u, _pos);
 	result[3][2] = -dot(_dir, _pos);
-	return result;
+	return inverse(result);
 
 }
 

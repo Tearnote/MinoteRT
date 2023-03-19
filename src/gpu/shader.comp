@@ -140,7 +140,7 @@ void main() {
 	const float ViewportHeight = 2;
 	const float ViewportWidth = ViewportHeight * AspectRatio;
 	const vec2 ViewportSize = {ViewportWidth, ViewportHeight};
-	const float FocalLength = 1;
+	const float FocalLength = 2;
 
 	// Camera
 	const Vector HorizontalSpan = {ViewportSize.x, 0, 0};

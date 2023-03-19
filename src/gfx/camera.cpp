@@ -9,19 +9,16 @@ auto Camera::direction() const -> vec3 {
 	return vec3{
 		cos(pitch) * cos(yaw),
 		cos(pitch) * sin(yaw),
-		sin(pitch)};
+		sin(pitch)
+	};
 
 }
 
 auto Camera::view() const -> mat4 {
 
-	return look(position, direction(), {0.0f, 0.0f, -1.0f});
-
-}
-
-auto Camera::projection() const -> mat4 {
-
-	return perspective(verticalFov, float(viewport.x()) / float(viewport.y()), nearPlane);
+	return mat4::translate(position) *
+		mat4::rotate({0.0f, 0.0f, 1.0f}, -yaw) *
+		mat4::rotate({1.0f, 0.0f, 0.0f}, -pitch);
 
 }
 
