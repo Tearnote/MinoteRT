@@ -2,19 +2,21 @@
 #pragma shader_stage(compute)
 #extension GL_EXT_shader_image_load_formatted: enable
 
+#define Color vec3
+#define Point vec3
+#define Vector vec3
+
 layout(local_size_x = 8, local_size_y = 8) in;
 
 layout(binding = 0) restrict uniform image2D i_dst;
 
 layout(push_constant) uniform Constants {
+	Point CameraPos;
 	uint FrameCounter;
+	Vector CameraDir;
 } C;
 
 const float Pi = 3.14159265359;
-
-#define Color vec3
-#define Point vec3
-#define Vector vec3
 
 struct Ray {
 	Point origin;
@@ -142,10 +144,9 @@ void main() {
 	const float FocalLength = 1;
 
 	// Camera
-	const Point Camera = {0, 0, 0};
 	const Vector HorizontalSpan = {ViewportSize.x, 0, 0};
 	const Vector VerticalSpan = {0, 0, ViewportSize.y};
-	const Point LowerLeftCorner = Camera - HorizontalSpan / 2 - VerticalSpan / 2 - Point(0, FocalLength, 0);
+	const Point LowerLeftCorner = C.CameraPos - HorizontalSpan / 2 - VerticalSpan / 2 - Point(0, FocalLength, 0);
 
 	// Starting ray
 	const vec2 Pitch = vec2(1.0) / vec2(DstSize - 1);
@@ -159,7 +160,7 @@ void main() {
 	for (uint i = 0; i < Samples; i += 1) {
 		// Camera ray
 		vec2 suv = uv + (random2(fract(uv * vec2(i + C.FrameCounter, C.FrameCounter))) - 0.5) * Pitch;
-		Ray ray = {Camera, LowerLeftCorner + suv.x * HorizontalSpan + suv.y * VerticalSpan};
+		Ray ray = {C.CameraPos, LowerLeftCorner + suv.x * HorizontalSpan + suv.y * VerticalSpan};
 		colorOut += traceRay(ray, MaxBounces, i);
 	}
 	colorOut /= Samples;

@@ -55,7 +55,16 @@ void Renderer::draw() {
 			cmd.bind_compute_pipeline("shader_comp")
 			   .bind_image(0, 0, "image");
 
-			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, uint(sys::s_vulkan->context.get_frame_count()));
+			struct Constants {
+				vec3 CameraPos;
+				uint FrameCounter;
+				vec3 CameraDir;
+			};
+			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
+				.CameraPos = vec3{0, 0, 0},
+				.FrameCounter = uint(sys::s_vulkan->context.get_frame_count()),
+				.CameraDir = vec3{0, 1, 0},
+			});
 
 			cmd.dispatch_invocations(
 				sys::s_vulkan->swapchain->extent.width,
