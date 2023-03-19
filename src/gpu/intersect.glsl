@@ -1,32 +1,30 @@
 #ifndef INTERSECT_GLSL
 #define INTERSECT_GLSL
 
-#include "types.glsl"
-
 struct Ray {
-    Point origin;
-    Vector direction;
+    vec3 origin;
+    vec3 direction;
 };
 
 struct Sphere {
-    Point center;
+    vec3 center;
     float radius;
-    Color albedo;
+    vec3 albedo;
 };
 
 struct Intersection {
-    Point position;
+    vec3 position;
     float t;
-    Vector normal;
-    Color albedo;
+    vec3 normal;
+    vec3 albedo;
 };
 
-Point rayAt(Ray ray, float t) {
+vec3 rayAt(Ray ray, float t) {
     return ray.origin + ray.direction * t;
 }
 
 Intersection raySphereIntersect(Ray ray, Sphere sphere) {
-    Point oc = ray.origin - sphere.center;
+    vec3 oc = ray.origin - sphere.center;
     float a = dot(ray.direction, ray.direction);
     float half_b = dot(oc, ray.direction);
     float c = dot(oc, oc) - sphere.radius * sphere.radius;

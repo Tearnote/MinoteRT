@@ -1,7 +1,7 @@
 #ifndef RANDOM_GLSL
 #define RANDOM_GLSL
 
-#include "types.glsl"
+#include "util.glsl"
 
 const vec3 RandomScale3 = {0.1031, 0.1030, 0.0973};
 

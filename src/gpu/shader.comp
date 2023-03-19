@@ -4,7 +4,6 @@
 
 #include "intersect.glsl"
 #include "random.glsl"
-#include "types.glsl"
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
@@ -21,15 +20,15 @@ const Sphere Spheres[SphereCount] = {
 	{{0, -1, -100.5}, 100, {0.2, 0.2, 0.2}}
 };
 
-Color skyColor(Ray ray) {
-	Vector ndir = normalize(ray.direction);
+vec3 skyColor(Ray ray) {
+	vec3 ndir = normalize(ray.direction);
 	float t = 0.5 * (ndir.z + 1.0);
-	return (1.0 - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0);
+	return (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
 }
 
-Color traceRay(Ray ray, uint maxDepth, uint sampleId) {
+vec3 traceRay(Ray ray, uint maxDepth, uint sampleId) {
 
-	Color color = {1, 1, 1};
+	vec3 color = {1, 1, 1};
 	for (uint i = 0; i < maxDepth; i += 1) {
 		// Find closest hit
 		Intersection closestHit;
@@ -43,7 +42,7 @@ Color traceRay(Ray ray, uint maxDepth, uint sampleId) {
 		// Return or spawn secondary ray
 		if (closestHit.t >= 0) {
 			if (i == maxDepth - 1) {
-				color = Color(0);
+				color = vec3(0);
 				break;
 			}
 			color *= closestHit.albedo;
@@ -77,9 +76,9 @@ void main() {
 	const float FocalLength = 2;
 
 	// Camera
-	const Vector HorizontalSpan = {ViewportSize.x, 0, 0};
-	const Vector VerticalSpan = {0, 0, ViewportSize.y};
-	const Point LowerLeftCorner = Point(0) - HorizontalSpan / 2 - VerticalSpan / 2 - Point(0, FocalLength, 0);
+	const vec3 HorizontalSpan = {ViewportSize.x, 0, 0};
+	const vec3 VerticalSpan = {0, 0, ViewportSize.y};
+	const vec3 LowerLeftCorner = vec3(0) - HorizontalSpan / 2 - VerticalSpan / 2 - vec3(0, FocalLength, 0);
 
 	// Starting ray
 	const vec2 Pitch = vec2(1.0) / vec2(DstSize - 1);
@@ -89,11 +88,11 @@ void main() {
 	// Rendering
 	const uint Samples = 32;
 	const uint MaxBounces = 16;
-	Color colorOut = {0, 0, 0};
+	vec3 colorOut = {0, 0, 0};
 	for (uint i = 0; i < Samples; i += 1) {
 		// Camera ray
 		vec2 suv = uv + (random2(fract(uv * vec2(i + C.FrameCounter, C.FrameCounter))) - 0.5) * Pitch;
-		Ray ray = {Point(0), LowerLeftCorner + suv.x * HorizontalSpan + suv.y * VerticalSpan};
+		Ray ray = {vec3(0), LowerLeftCorner + suv.x * HorizontalSpan + suv.y * VerticalSpan};
 		ray.origin = (C.View * vec4(ray.origin, 1)).xyz;
 		ray.direction = (C.View * vec4(ray.direction, 0)).xyz;
 		colorOut += traceRay(ray, MaxBounces, i);
