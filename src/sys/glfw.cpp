@@ -62,6 +62,7 @@ Glfw::Glfw(std::string_view _title, uvec2 _size) {
 	glfwSetWindowUserPointer(m_window, this);
 
 	glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int, int action, int) {
+		if (action == GLFW_REPEAT) return;
 		auto& glfw = *reinterpret_cast<Glfw*>(glfwGetWindowUserPointer(window));
 		for (auto& func: glfw.m_keyCallbacks)
 			func(key, action == GLFW_PRESS);
@@ -77,6 +78,12 @@ Glfw::Glfw(std::string_view _title, uvec2 _size) {
 		auto& glfw = *reinterpret_cast<Glfw*>(glfwGetWindowUserPointer(window));
 		for (auto& func: glfw.m_mouseButtonCallbacks)
 			func(button, action == GLFW_PRESS);
+	});
+
+	// Quit on ESC
+	registerKeyCallback([this](int key, bool) {
+		if (key == GLFW_KEY_ESCAPE)
+			glfwSetWindowShouldClose(m_window, GLFW_TRUE);
 	});
 
 	L_INFO("Window {} created at {}x{}", _title, _size.x(), _size.y());
