@@ -25,12 +25,14 @@ struct Ray {
 struct Sphere {
 	Point center;
 	float radius;
+	Color albedo;
 };
 
 struct Intersection {
-	float t;
 	Point position;
+	float t;
 	Vector normal;
+	Color albedo;
 };
 
 Point rayAt(Ray ray, float t) {
@@ -57,14 +59,15 @@ Intersection raySphereIntersect(Ray ray, Sphere sphere) {
 		result.t = (-half_b - sqrt(discriminant)) / a;
 		result.position = rayAt(ray, result.t);
 		result.normal = normalize(result.position - sphere.center);
+		result.albedo = sphere.albedo;
 	}
 	return result;
 }
 
 const uint SphereCount = 2;
 const Sphere Spheres[SphereCount] = {
-	{{0, -1,      0}, 0.5},
-	{{0, -1, -100.5}, 100}
+	{{0, -1,      0}, 0.5, {0.2, 0.7, 0.0}},
+	{{0, -1, -100.5}, 100, {0.2, 0.2, 0.2}}
 };
 
 // https://github.com/LWJGL/lwjgl3-demos/blob/main/res/org/lwjgl/demo/opengl/raytracing/randomCommon.glsl
@@ -112,7 +115,7 @@ Color traceRay(Ray ray, uint maxDepth, uint sampleId) {
 				color = Color(0);
 				break;
 			}
-			color *= 0.5;
+			color *= closestHit.albedo;
 			ray = Ray(
 				closestHit.position + closestHit.normal * 0.0001,
 				closestHit.normal + randomSpherePoint(random3(vec3(gl_GlobalInvocationID.x * sampleId, gl_GlobalInvocationID.y * sampleId, C.FrameCounter)))
