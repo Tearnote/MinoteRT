@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string_view>
+#include <functional>
 
 #include "math.hpp"
 #include "stx/time.hpp"
@@ -33,6 +34,12 @@ public:
 
 	auto windowSize() -> uvec2;
 
+	auto getCursorPosition() -> vec2;
+
+	void registerKeyCallback(std::function<void(int, bool)>);
+	void registerCursorMotionCallback(std::function<void(vec2)>);
+	void registerMouseButtonCallback(std::function<void(int, bool)>);
+
 	// Not movable, not copyable
 	Glfw(Glfw const&) = delete;
 	auto operator=(Glfw const&) -> Glfw& = delete;
@@ -40,6 +47,10 @@ public:
 private:
 
 	GLFWwindow* m_window;
+
+	std::vector<std::function<void(int, bool)>> m_keyCallbacks;
+	std::vector<std::function<void(vec2)>> m_cursorMotionCallbacks;
+	std::vector<std::function<void(int, bool)>> m_mouseButtonCallbacks;
 
 	// Only usable from the service
 	friend struct util::Service<Glfw>;

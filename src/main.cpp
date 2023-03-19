@@ -4,10 +4,12 @@
 #include <iostream>
 #include <cstdlib>
 
+#include "freecam.hpp"
 #include "log.hpp"
 #include "sys/vulkan.hpp"
 #include "sys/glfw.hpp"
 #include "gfx/renderer.hpp"
+#include "gfx/camera.hpp"
 
 auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 
@@ -24,6 +26,15 @@ auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 	auto glfw = sys::s_glfw.provide("MinoteRT");
 	auto vulkan = sys::s_vulkan.provide();
 	auto renderer = gfx::Renderer();
+	auto camera = gfx::Camera{
+		.position = {0.0f, 0.0f, 0.0f},
+		.yaw = 0.0f,
+		.pitch = 0.0f,
+		.lookSpeed = 1.0f / 256.0f,
+		.moveSpeed = 1.0f / 4.0f,
+	};
+	auto freecam = Freecam();
+	freecam.registerEvents();
 
 	// Main loop
 	while(!sys::s_glfw->isClosing()) {
@@ -31,8 +42,10 @@ auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 		// Handle user and system events
 		sys::s_glfw->poll();
 
+		freecam.updateCamera(camera);
+
 		// Draw the next frame
-		renderer.draw();
+		renderer.draw(camera);
 
 	}
 

@@ -15,7 +15,7 @@ Renderer::Renderer():
 	m_deviceResource(sys::s_vulkan->context, InflightFrames),
 	m_multiFrameAllocator(m_deviceResource) {}
 
-void Renderer::draw() {
+void Renderer::draw(gfx::Camera const& _camera) {
 
 	// Begin the frame
 	sys::s_vulkan->context.next_frame();
@@ -51,7 +51,7 @@ void Renderer::draw() {
 		.resources = {
 			"image"_image >> vuk::eComputeWrite >> "image_out",
 		},
-		.execute = [](vuk::CommandBuffer& cmd) {
+		.execute = [&_camera](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("shader_comp")
 			   .bind_image(0, 0, "image");
 
@@ -61,9 +61,9 @@ void Renderer::draw() {
 				vec3 CameraDir;
 			};
 			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
-				.CameraPos = vec3{0, 0, 0},
+				.CameraPos = _camera.position,
 				.FrameCounter = uint(sys::s_vulkan->context.get_frame_count()),
-				.CameraDir = vec3{0, 1, 0},
+				.CameraDir = _camera.direction(),
 			});
 
 			cmd.dispatch_invocations(

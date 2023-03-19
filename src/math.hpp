@@ -480,17 +480,25 @@ static_assert(std::is_trivially_constructible_v<mat4>);
 
 //=== Conversion literals
 
-consteval auto operator""_cm(unsigned long long int val) -> float { return double(val) * 0.000'001; }
-consteval auto operator""_cm(long double val) -> float { return double(val) * 0.000'001; }
+namespace math_literals {
 
-consteval auto operator""_m(unsigned long long int val) -> float { return double(val) * 0.001; }
-consteval auto operator""_m(long double val) -> float { return double(val) * 0.001; }
+consteval auto operator ""_cm(unsigned long long int val) -> float { return double(val) * 0.000'001; }
 
-consteval auto operator""_km(unsigned long long int val) -> float { return val; }
-consteval auto operator""_km(long double val) -> float { return val; }
+consteval auto operator ""_cm(long double val) -> float { return double(val) * 0.000'001; }
 
-consteval auto operator""_deg(unsigned long long int val) -> float { return radians(double(val)); }
-consteval auto operator""_deg(long double val) -> float { return radians(val); }
+consteval auto operator ""_m(unsigned long long int val) -> float { return double(val) * 0.001; }
+
+consteval auto operator ""_m(long double val) -> float { return double(val) * 0.001; }
+
+consteval auto operator ""_km(unsigned long long int val) -> float { return val; }
+
+consteval auto operator ""_km(long double val) -> float { return val; }
+
+consteval auto operator ""_deg(unsigned long long int val) -> float { return radians(double(val)); }
+
+consteval auto operator ""_deg(long double val) -> float { return radians(val); }
+
+}
 
 }
 

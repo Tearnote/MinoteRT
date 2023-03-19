@@ -29,6 +29,7 @@ include(cmake/Dependencies.cmake)
 ### Main executable
 add_executable(MinoteRT
 	src/gfx/renderer.hpp src/gfx/renderer.cpp
+	src/gfx/camera.hpp src/gfx/camera.cpp
 	src/sys/vulkan.hpp src/sys/vulkan.cpp
 	src/sys/glfw.hpp src/sys/glfw.cpp
 	src/util/service.hpp
@@ -42,7 +43,7 @@ add_executable(MinoteRT
 	src/math.hpp
 	src/main.cpp
 	src/log.hpp src/log.cpp
-)
+	src/freecam.hpp src/freecam.cpp)
 target_include_directories(MinoteRT PRIVATE src) # All includes start from src as root
 
 target_link_options(MinoteRT PRIVATE "/SUBSYSTEM:WINDOWS")

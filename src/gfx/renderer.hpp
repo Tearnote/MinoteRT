@@ -3,6 +3,8 @@
 #include <vuk/Allocator.hpp>
 #include <vuk/resources/DeviceFrameResource.hpp>
 
+#include "camera.hpp"
+
 namespace minote::gfx {
 
 class Renderer {
@@ -13,7 +15,7 @@ public:
 
 	Renderer();
 
-	void draw();
+	void draw(gfx::Camera const&);
 
 private:
 

@@ -58,6 +58,27 @@ Glfw::Glfw(std::string_view _title, uvec2 _size) {
 	m_window = glfwCreateWindow(int(_size.x()), int(_size.y()), std::string(_title).c_str(), nullptr, nullptr);
 	ASSUME(m_window);
 
+	// Set up event callbacks
+	glfwSetWindowUserPointer(m_window, this);
+
+	glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int, int action, int) {
+		auto& glfw = *reinterpret_cast<Glfw*>(glfwGetWindowUserPointer(window));
+		for (auto& func: glfw.m_keyCallbacks)
+			func(key, action == GLFW_PRESS);
+	});
+
+	glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double x, double y) {
+		auto& glfw = *reinterpret_cast<Glfw*>(glfwGetWindowUserPointer(window));
+		for (auto& func: glfw.m_cursorMotionCallbacks)
+			func(vec2{float(x), float(y)});
+	});
+
+	glfwSetMouseButtonCallback(m_window, [](GLFWwindow* window, int button, int action, int) {
+		auto& glfw = *reinterpret_cast<Glfw*>(glfwGetWindowUserPointer(window));
+		for (auto& func: glfw.m_mouseButtonCallbacks)
+			func(button, action == GLFW_PRESS);
+	});
+
 	L_INFO("Window {} created at {}x{}", _title, _size.x(), _size.y());
 
 }
@@ -129,6 +150,33 @@ auto Glfw::windowSize() -> uvec2 {
 	auto h = 0;
 	glfwGetFramebufferSize(m_window, &w, &h);
 	return uvec2{uint(w), uint(h)};
+
+}
+
+auto Glfw::getCursorPosition() -> vec2 {
+
+	double x;
+	double y;
+	glfwGetCursorPos(m_window, &x, &y);
+	return vec2{float(x), float(y)};
+
+}
+
+void Glfw::registerKeyCallback(std::function<void(int, bool)> _func) {
+
+	m_keyCallbacks.emplace_back(std::move(_func));
+
+}
+
+void Glfw::registerCursorMotionCallback(std::function<void(vec2)> _func) {
+
+	m_cursorMotionCallbacks.emplace_back(std::move(_func));
+
+}
+
+void Glfw::registerMouseButtonCallback(std::function<void(int, bool)> _func) {
+
+	m_mouseButtonCallbacks.emplace_back(std::move(_func));
 
 }
 
