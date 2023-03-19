@@ -1,9 +1,10 @@
 #version 460
 #pragma shader_stage(compute)
+#extension GL_EXT_shader_image_load_formatted: enable
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
-layout(binding = 0) restrict writeonly uniform image2D i_dst;
+layout(binding = 0) restrict uniform image2D i_dst;
 
 void main() {
 	uvec2 gid = gl_GlobalInvocationID.xy;
