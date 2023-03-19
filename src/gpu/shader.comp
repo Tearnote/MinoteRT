@@ -2,9 +2,9 @@
 #pragma shader_stage(compute)
 #extension GL_EXT_shader_image_load_formatted: enable
 
-#define Color vec3
-#define Point vec3
-#define Vector vec3
+#include "intersect.glsl"
+#include "random.glsl"
+#include "types.glsl"
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
@@ -15,85 +15,16 @@ layout(push_constant) uniform Constants {
 	uint FrameCounter;
 } C;
 
-const float Pi = 3.14159265359;
-
-struct Ray {
-	Point origin;
-	Vector direction;
-};
-
-struct Sphere {
-	Point center;
-	float radius;
-	Color albedo;
-};
-
-struct Intersection {
-	Point position;
-	float t;
-	Vector normal;
-	Color albedo;
-};
-
-Point rayAt(Ray ray, float t) {
-	return ray.origin + ray.direction * t;
-}
-
-Color skyColor(Ray ray) {
-	Vector ndir = normalize(ray.direction);
-	float t = 0.5 * (ndir.z + 1.0);
-	return (1.0 - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0);
-}
-
-Intersection raySphereIntersect(Ray ray, Sphere sphere) {
-	Point oc = ray.origin - sphere.center;
-	float a = dot(ray.direction, ray.direction);
-	float half_b = dot(oc, ray.direction);
-	float c = dot(oc, oc) - sphere.radius * sphere.radius;
-	float discriminant = half_b * half_b - a * c;
-
-	Intersection result;
-	if (discriminant < 0) {
-		result.t = -1;
-	} else {
-		result.t = (-half_b - sqrt(discriminant)) / a;
-		result.position = rayAt(ray, result.t);
-		result.normal = normalize(result.position - sphere.center);
-		result.albedo = sphere.albedo;
-	}
-	return result;
-}
-
 const uint SphereCount = 2;
 const Sphere Spheres[SphereCount] = {
 	{{0, -1,      0}, 0.5, {0.2, 0.7, 0.0}},
 	{{0, -1, -100.5}, 100, {0.2, 0.2, 0.2}}
 };
 
-// https://github.com/LWJGL/lwjgl3-demos/blob/main/res/org/lwjgl/demo/opengl/raytracing/randomCommon.glsl
-vec3 randomSpherePoint(vec3 rand) {
-	float ang1 = (rand.x + 1.0) * Pi; // [-1..1) -> [0..2*PI)
-	float u = rand.y; // [-1..1), cos and acos(2v-1) cancel each other out, so we arrive at [-1..1)
-	float u2 = u * u;
-	float sqrt1MinusU2 = sqrt(1.0 - u2);
-	float x = sqrt1MinusU2 * cos(ang1);
-	float y = sqrt1MinusU2 * sin(ang1);
-	float z = u;
-	return vec3(x, y, z);
-}
-
-const vec3 RandomScale3 = {0.1031, 0.1030, 0.0973};
-
-vec2 random2(vec2 p) {
-	vec3 p3 = fract(p.xyx * RandomScale3);
-	p3 += dot(p3, p3.yzx + 19.19);
-	return fract((p3.xx+p3.yz)*p3.zy);
-}
-
-vec3 random3(vec3 p) {
-	p = fract(p * RandomScale3);
-	p += dot(p, p.yxz+19.19);
-	return fract((p.xxy + p.yzz)*p.zyx);
+Color skyColor(Ray ray) {
+	Vector ndir = normalize(ray.direction);
+	float t = 0.5 * (ndir.z + 1.0);
+	return (1.0 - t) * Color(1.0, 1.0, 1.0) + t * Color(0.5, 0.7, 1.0);
 }
 
 Color traceRay(Ray ray, uint maxDepth, uint sampleId) {
