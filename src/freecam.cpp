@@ -58,8 +58,8 @@ void Freecam::updateCamera(gfx::Camera& _camera) {
 
 	_camera.roam({
 		             float(right) - float(left),
+		             float(down) - float(up),
 		             0.0f,
-		             float(up) - float(down),
 	             });
 	_camera.shift({0.0f, 0.0f, float(floating)});
 

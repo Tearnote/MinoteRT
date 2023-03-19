@@ -41,14 +41,8 @@ void Camera::shift(vec3 distance) {
 
 void Camera::roam(vec3 distance) {
 
-	auto fwd = direction();
-	auto right = vec3{fwd.y(), -fwd.x(), 0.0f};
-	auto up = vec3{-fwd.y(), fwd.z(), fwd.x()};
-
-	shift(
-		distance.x() * right +
-		distance.y() * up +
-		distance.z() * fwd);
+	distance = vec3(view() * vec4(distance, 0.0));
+	shift(distance);
 
 }
 

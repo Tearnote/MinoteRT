@@ -27,7 +27,7 @@ auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 	auto vulkan = sys::s_vulkan.provide();
 	auto renderer = gfx::Renderer();
 	auto camera = gfx::Camera{
-		.position = {0.0f, 2.0f, 0.0f},
+		.position = {0.0f, 1.0f, 0.0f},
 		.yaw = 0.0f,
 		.pitch = 0.0f,
 		.lookSpeed = 1.0f / 256.0f,
