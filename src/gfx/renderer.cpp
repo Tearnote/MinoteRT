@@ -56,14 +56,12 @@ void Renderer::draw(gfx::Camera const& _camera) {
 			   .bind_image(0, 0, "image");
 
 			struct Constants {
-				vec3 CameraPos;
+				mat4 View;
 				uint FrameCounter;
-				vec3 CameraDir;
 			};
 			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
-				.CameraPos = _camera.position,
+				.View = _camera.view(),
 				.FrameCounter = uint(sys::s_vulkan->context.get_frame_count()),
-				.CameraDir = _camera.direction(),
 			});
 
 			cmd.dispatch_invocations(
