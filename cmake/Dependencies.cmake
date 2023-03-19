@@ -2,7 +2,8 @@ include_guard()
 
 ### System dependencies
 include(FetchContent)
-find_package(Vulkan REQUIRED)
+find_package(Vulkan REQUIRED
+	COMPONENTS glslc)
 
 ### Fetched libraries
 set(VOLK_PULL_IN_VULKAN OFF CACHE BOOL "" FORCE)

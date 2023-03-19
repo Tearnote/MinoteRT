@@ -174,6 +174,7 @@ auto Vulkan::selectPhysicalDevice(vkb::Instance& _instance, VkSurfaceKHR _surfac
 	auto physicalDeviceVulkan13Features = VkPhysicalDeviceVulkan13Features{
 		.computeFullSubgroups = VK_TRUE,
 		.synchronization2 = VK_TRUE, // pending vuk bugfix
+		.maintenance4 = VK_TRUE,
 	};
 
 	auto physicalDeviceSelectorResult = vkb::PhysicalDeviceSelector(_instance)

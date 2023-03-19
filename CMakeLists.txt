@@ -54,3 +54,8 @@ target_link_libraries(MinoteRT PRIVATE assert)
 target_link_libraries(MinoteRT PRIVATE volk)
 target_link_libraries(MinoteRT PRIVATE glfw)
 target_link_libraries(MinoteRT PRIVATE vuk)
+
+### Assets and other artifacts
+include(cmake/Shaders.cmake)
+add_dependencies(MinoteRT MinoteRT_Shaders)
+target_include_directories(MinoteRT PUBLIC ${PROJECT_BINARY_DIR}/$<CONFIG>/generated)

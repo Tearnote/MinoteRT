@@ -1,0 +1,25 @@
+#version 460
+#pragma shader_stage(compute)
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) restrict writeonly uniform image2D i_dst;
+
+void main() {
+	uvec2 gid = gl_GlobalInvocationID.xy;
+	vec4 colorOut = vec4(
+		(sin(float(gid.y) / 7.0) / 2.0 + 0.5) * (float(gid.x % 236) / 236.0),
+		cos(float(gid.y) / 8.0) * (gid.x / 12 % 2 == 0? 0.0 : 1.0),
+		fract(tan(float((gid.x + gid.y + gid.y % 4 + gid.x * 2 % 13) % 212) / 112.0)),
+		1.0
+	);
+	if (gid.x % 32 < 16 && gid.y % 32 < 16)
+		colorOut = colorOut.gbra;
+	if (gid.x % 32 >= 16 && gid.y % 32 < 16)
+		colorOut = colorOut.brga;
+	if (gid.x % 32 < 16 && gid.y % 32 >= 16)
+		colorOut = colorOut.rbga;
+	colorOut.g = fract(colorOut.g + (int(colorOut.r * 4) ^ int(colorOut.b * 5)));
+	colorOut = pow(colorOut, vec4(1.0 / 1.5));
+	imageStore(i_dst, ivec2(gid), colorOut);
+}
