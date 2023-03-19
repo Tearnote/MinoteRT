@@ -6,6 +6,12 @@ layout(local_size_x = 8, local_size_y = 8) in;
 
 layout(binding = 0) restrict uniform image2D i_dst;
 
+layout(push_constant) uniform Constants {
+	uint FrameCounter;
+} C;
+
+const float Pi = 3.14159265359;
+
 #define Color vec3
 #define Point vec3
 #define Vector vec3
@@ -60,6 +66,71 @@ const Sphere Spheres[SphereCount] = {
 	{{0, -1, -100.5}, 100}
 };
 
+// https://github.com/LWJGL/lwjgl3-demos/blob/main/res/org/lwjgl/demo/opengl/raytracing/randomCommon.glsl
+vec3 randomHemispherePoint(vec3 n, vec2 rand) {
+	float ang1 = (rand.x + 1.0) * Pi; // [-1..1) -> [0..2*PI)
+	float u = rand.y; // [-1..1), cos and acos(2v-1) cancel each other out, so we arrive at [-1..1)
+	float u2 = u * u;
+	float sqrt1MinusU2 = sqrt(1.0 - u2);
+	float x = sqrt1MinusU2 * cos(ang1);
+	float y = sqrt1MinusU2 * sin(ang1);
+	float z = u;
+	vec3 v = vec3(x, y, z);
+	return v * sign(dot(v, n));
+}
+
+uvec3 pcg3d(uvec3 v) {
+	v = v * 1664525u + 1013904223u;
+	v.x += v.y * v.z;
+	v.y += v.z * v.x;
+	v.z += v.x * v.y;
+	v ^= v >> 16u;
+	v.x += v.y * v.z;
+	v.y += v.z * v.x;
+	v.z += v.x * v.y;
+	return v;
+}
+
+vec3 random3(vec3 f) {
+	return uintBitsToFloat((pcg3d(floatBitsToUint(f)) & 0x007FFFFFu) | 0x3F800000u) - 1.0;
+}
+
+vec2 randvec2(uint s) {
+	return random3(vec3(gl_GlobalInvocationID.xy + ivec2(s), C.FrameCounter)).xy;
+}
+
+Color traceRay(Ray ray, uint maxDepth, uint sampleId) {
+
+	Color color = {1, 1, 1};
+	for (uint i = 0; i < maxDepth; i += 1) {
+		// Find closest hit
+		Intersection closestHit;
+		closestHit.t = -1;
+		for (uint i = 0; i < SphereCount; i += 1) {
+			Intersection intersection = raySphereIntersect(ray, Spheres[i]);
+			if (intersection.t >= 0 && (intersection.t < closestHit.t || closestHit.t < 0))
+			closestHit = intersection;
+		}
+
+		// Return or spawn secondary ray
+		if (closestHit.t >= 0) {
+			if (i == maxDepth - 1) {
+				color = Color(0);
+				break;
+			}
+			color *= 0.5;
+			ray = Ray(
+				closestHit.position + closestHit.normal * 0.0001,
+				randomHemispherePoint(closestHit.normal, randvec2(i + sampleId * maxDepth))
+			);
+		} else {
+			color *= skyColor(ray);
+			break;
+		}
+	}
+	return color;
+}
+
 void main() {
 	// Input
 	const uvec2 Gid = gl_GlobalInvocationID.xy;
@@ -88,22 +159,15 @@ void main() {
 	uv.y = 1.0 - uv.y;
 	Ray ray = {Camera, LowerLeftCorner + uv.x * HorizontalSpan + uv.y * VerticalSpan};
 
-	// Intersection test
-	Intersection closestHit;
-	closestHit.t = -1;
-	for (uint i = 0; i < SphereCount; i += 1) {
-		Intersection intersection = raySphereIntersect(ray, Spheres[i]);
-		if (intersection.t >= 0 && (intersection.t < closestHit.t || closestHit.t < 0))
-			closestHit = intersection;
-	}
-
 	// Shading
-	Color colorOut;
-	if (closestHit.t >= 0)
-		colorOut = closestHit.normal / 2 + 0.5;
-	else
-		colorOut = skyColor(ray);
+	Color colorOut = {0, 0, 0};
+	const uint MaxBounces = 16;
+	const uint Samples = 64;
+	for (uint i = 0; i < Samples; i += 1)
+		colorOut += traceRay(ray, MaxBounces, i);
+	colorOut /= Samples;
 
 	// Write output
+	colorOut = sqrt(colorOut);
 	imageStore(i_dst, ivec2(Gid), vec4(colorOut, 1));
 }

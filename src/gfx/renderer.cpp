@@ -51,9 +51,11 @@ void Renderer::draw() {
 		.resources = {
 			"image"_image >> vuk::eComputeWrite >> "image_out",
 		},
-		.execute = [](auto& cmd) {
+		.execute = [](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("shader_comp")
 			   .bind_image(0, 0, "image");
+
+			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, uint(sys::s_vulkan->context.get_frame_count()));
 
 			cmd.dispatch_invocations(
 				sys::s_vulkan->swapchain->extent.width,
