@@ -97,10 +97,10 @@ void main() {
 		Ray ray = {vec3(0), LowerLeftCorner + suv.x * HorizontalSpan + suv.y * VerticalSpan};
 		ray.origin = (C.View * vec4(ray.origin, 1)).xyz;
 		ray.direction = (C.View * vec4(ray.direction, 0)).xyz;
-		colorOut += traceRay(ray, MaxBounces, rngState);
+		colorOut += tonemap(traceRay(ray, MaxBounces, rngState));
 	}
 	colorOut /= Samples;
 
 	// Write output
-	imageStore(i_dst, ivec2(Gid), vec4(colorOut, 1));
+	imageStore(i_dst, ivec2(Gid), vec4(tonemapInvert(colorOut), 1));
 }
