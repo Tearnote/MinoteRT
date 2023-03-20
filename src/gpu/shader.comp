@@ -48,7 +48,7 @@ vec3 traceRay(Ray ray, uint maxDepth, inout uint rngState) {
 			color *= closestHit.albedo;
 			ray = Ray(
 				closestHit.position + closestHit.normal * 0.0001,
-				closestHit.normal + randomSpherePoint(vec3(randomFloat(rngState), randomFloat(rngState), randomFloat(rngState)))
+				closestHit.normal + randomSpherePoint(vec3(randomFloat(rngState), randomFloat(rngState), randomFloat(rngState)) * 2.0 - 1.0)
 			);
 		} else {
 			color *= skyColor(ray);
