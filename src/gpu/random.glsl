@@ -6,6 +6,7 @@
 const vec3 RandomScale3 = {0.1031, 0.1030, 0.0973};
 
 // https://github.com/LWJGL/lwjgl3-demos/blob/main/res/org/lwjgl/demo/opengl/raytracing/randomCommon.glsl
+// BSD 3-Clause licensed
 vec3 randomSpherePoint(vec3 rand) {
     float ang1 = (rand.x + 1.0) * Pi; // [-1..1) -> [0..2*PI)
     float u = rand.y; // [-1..1), cos and acos(2v-1) cancel each other out, so we arrive at [-1..1)
@@ -17,17 +18,17 @@ vec3 randomSpherePoint(vec3 rand) {
     return vec3(x, y, z);
 }
 
-uint xorshift(inout uint state) {
-    uint x = state;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 15;
-    state = x;
-    return x;
+// https://www.shadertoy.com/view/XlGcRh
+uint pcg(inout uint v) {
+    uint state = v * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    v = (word >> 22u) ^ word;
+    return v;
 }
 
 float randomFloat(inout uint state) {
-    return (xorshift(state) & 0xFFFFFFu) / 16777216.0f;
+    return (pcg(state) & 0xFFFFFFu) / 16777216.0f;
 }
+
 
 #endif //RANDOM_GLSL
