@@ -86,20 +86,10 @@ void main() {
 	vec2 uv = (vec2(Gid) + 0.5) * Pitch;
 	uv.y = 1.0 - uv.y;
 	Ray ray;
-	ray.origin = (C.View * vec4(0, 0, 0, 1)).xyz;
+	ray.origin = (C.View * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
-	// Rendering
-	const uint Samples = 1;
-	const uint MaxBounces = 4;
-	vec3 colorOut = {0, 0, 0};
-	for (uint i = 0; i < Samples; i += 1) {
-		// Camera ray
-		ray.direction = LowerLeftCorner + uv.x * HorizontalSpan + uv.y * VerticalSpan;
-		ray.direction = (C.View * vec4(ray.direction, 0)).xyz;
-		colorOut += tonemap(traceRay(ray, MaxBounces, rngState));
-	}
-	colorOut /= Samples;
-
-	// Write output
-	imageStore(i_dst, ivec2(Gid), vec4(tonemapInvert(colorOut), 1));
+	// Fire primary ray
+	ray.direction = LowerLeftCorner + uv.x * HorizontalSpan + uv.y * VerticalSpan;
+	ray.direction = (C.View * vec4(ray.direction, 0)).xyz;
+	colorOut += tonemap(traceRay(ray, MaxBounces, rngState));
 }

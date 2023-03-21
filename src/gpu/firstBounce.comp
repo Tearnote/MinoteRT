@@ -1,0 +1,82 @@
+#version 460
+#pragma shader_stage(compute)
+#extension GL_EXT_shader_image_load_formatted: enable
+
+#include "intersect.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) restrict uniform uimage2D i_visibility;
+layout(binding = 1) restrict uniform image2D i_depth;
+layout(binding = 2) restrict uniform uimage2D i_seed;
+layout(binding = 3) restrict uniform image2D i_motion;
+layout(push_constant) uniform Constants {
+    mat4 view;
+    uint frameCounter;
+    float vFov;
+} C;
+
+const uint SphereCount = 2;
+const Sphere Spheres[SphereCount] = {
+    {{0.0, -1.0,    0.0}, 0.5, {0.2, 0.7, 0.0}},
+    {{0.0, -1.0, -100.5}, 100, {0.2, 0.2, 0.2}}
+};
+
+Intersection tracePrimaryRay(Ray ray) {
+    Intersection closestHit;
+    closestHit.primitiveId = -1u;
+    for (uint i = 0u; i < SphereCount; i += 1u) {
+        float t = raySphereIntersect(ray, Spheres[i]);
+        if (t >= 0.0 && (closestHit.primitiveId == -1u || t < closestHit.t)) {
+            closestHit.t = t;
+            closestHit.primitiveId = i;
+        }
+    }
+    closestHit.position = rayAt(ray, closestHit.t);
+    closestHit.normal = normalize(closestHit.position - Spheres[closestHit.primitiveId].center);
+    return closestHit;
+}
+
+void main() {
+    // Output details
+    const uvec2 Gid = gl_GlobalInvocationID.xy;
+    const uvec2 OutBounds = uvec2(imageSize(i_visibility));
+    if (any(greaterThanEqual(Gid, OutBounds))) return;
+
+    const vec2 OutPitch = vec2(1.0) / vec2(OutBounds);
+    vec2 outUV = (vec2(Gid) + 0.5) * OutPitch;
+    outUV.y = 1.0 - outUV.y;
+
+    // Viewport
+    const float AspectRatio = float(OutBounds.x) / float(OutBounds.y);
+    const float FocalLength = 1.0;
+    const float ViewportHeight = 2.0 * tan(C.vFov / 2.0);
+    const float ViewportWidth = AspectRatio * ViewportHeight;
+    const vec2 ViewportSize = {ViewportWidth, ViewportHeight};
+
+    // Camera
+    const vec3 HorizontalSpan = {ViewportSize.x, 0.0, 0.0};
+    const vec3 VerticalSpan = {0.0, 0.0, ViewportSize.y};
+    const vec3 LowerLeftCorner = vec3(0.0) - HorizontalSpan / 2.0 - VerticalSpan / 2.0 - vec3(0.0, FocalLength, 0.0);
+    const vec3 CameraOrigin = (C.view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+    // Fire primary ray
+    Ray ray;
+    ray.origin = CameraOrigin;
+    ray.direction = LowerLeftCorner + outUV.x * HorizontalSpan + outUV.y * VerticalSpan;
+    ray.direction = (C.view * vec4(ray.direction, 0)).xyz;
+    Intersection firstBounce = tracePrimaryRay(ray);
+
+    // Write out
+    imageStore(i_visibility, ivec2(Gid), uvec4(firstBounce.primitiveId));
+
+    vec3 CameraDirection = vec3(C.view * vec4(0.0, -FocalLength, 0.0, 0.0));
+    float linearDepth = dot(firstBounce.position - ray.origin, CameraDirection);
+    imageStore(i_depth, ivec2(Gid), vec4(linearDepth));
+
+    uint seed = (Gid.x * 1973u + Gid.y * 9277u + C.frameCounter * 26699u) | 1u;
+    imageStore(i_seed, ivec2(Gid), uvec4(seed));
+
+    //TODO
+    imageStore(i_motion, ivec2(Gid), vec4(0.0));
+}

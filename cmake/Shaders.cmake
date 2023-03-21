@@ -4,8 +4,8 @@ include(cmake/Dependencies.cmake)
 
 set(SHADER_DIR_PREFIX src/gpu/)
 set(SHADER_SOURCES
+	firstBounce.comp
 	tonemap.comp
-	shader.comp
 )
 
 foreach(SHADER_PATH ${SHADER_SOURCES})

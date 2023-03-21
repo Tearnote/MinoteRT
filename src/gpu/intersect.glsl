@@ -16,30 +16,24 @@ struct Intersection {
     vec3 position;
     float t;
     vec3 normal;
-    vec3 albedo;
+    uint primitiveId;
 };
 
 vec3 rayAt(Ray ray, float t) {
     return ray.origin + ray.direction * t;
 }
 
-Intersection raySphereIntersect(Ray ray, Sphere sphere) {
+float raySphereIntersect(Ray ray, Sphere sphere) {
     vec3 oc = ray.origin - sphere.center;
     float a = dot(ray.direction, ray.direction);
     float half_b = dot(oc, ray.direction);
     float c = dot(oc, oc) - sphere.radius * sphere.radius;
     float discriminant = half_b * half_b - a * c;
 
-    Intersection result;
-    if (discriminant < 0) {
-        result.t = -1;
-    } else {
-        result.t = (-half_b - sqrt(discriminant)) / a;
-        result.position = rayAt(ray, result.t);
-        result.normal = normalize(result.position - sphere.center);
-        result.albedo = sphere.albedo;
-    }
-    return result;
+    if (discriminant < 0.0)
+        return -1.0;
+    else
+        return (-half_b - sqrt(discriminant)) / a;
 }
 
 #endif //INTERSECT_GLSL

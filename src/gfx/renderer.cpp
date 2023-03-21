@@ -6,9 +6,12 @@
 #include <vuk/RenderGraph.hpp>
 #include <vuk/Context.hpp>
 
+#include "math.hpp"
 #include "sys/vulkan.hpp"
 
 namespace minote::gfx {
+
+using namespace math_literals;
 
 Renderer::Renderer():
 	m_deviceResource(sys::s_vulkan->context, InflightFrames),
@@ -24,12 +27,12 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	// Compile shaders
 	static auto shadersCompiled = false;
 	if(!shadersCompiled) {
-		auto shaderPci = vuk::PipelineBaseCreateInfo();
-		constexpr auto shaderSource = std::to_array<uint>({
-#include "spv/shader.comp.spv"
+		auto firstBouncePci = vuk::PipelineBaseCreateInfo();
+		constexpr auto firstBounceSource = std::to_array<uint>({
+#include "spv/firstBounce.comp.spv"
 		});
-		shaderPci.add_static_spirv(shaderSource.data(), shaderSource.size(), "shader.comp");
-		sys::s_vulkan->context.create_named_pipeline("shader_comp", shaderPci);
+		firstBouncePci.add_static_spirv(firstBounceSource.data(), firstBounceSource.size(), "shader.comp");
+		sys::s_vulkan->context.create_named_pipeline("first_bounce_comp", firstBouncePci);
 
 		auto tonemapPci = vuk::PipelineBaseCreateInfo();
 		constexpr auto tonemapSource = std::to_array<uint>({
@@ -41,43 +44,71 @@ void Renderer::draw(gfx::Camera const& _camera) {
 
 	// Create a rendergraph
 	auto rg = std::make_shared<vuk::RenderGraph>("simple");
-	rg->attach_image("rt/blank", vuk::ImageAttachment{
+	rg->attach_image("visibility/blank", vuk::ImageAttachment{
 		.extent = vuk::Dimension3D::absolute(
 			sys::s_vulkan->swapchain->extent.width,
 			sys::s_vulkan->swapchain->extent.height
 		),
-		.format = vuk::Format::eR16G16B16A16Sfloat,
+		.format = vuk::Format::eR32Uint,
 		.sample_count = vuk::Samples::e1,
 		.level_count = 1,
 		.layer_count = 1,
 	});
-	rg->attach_image("tonemapped/blank", vuk::ImageAttachment{
+	rg->attach_image("depth/blank", vuk::ImageAttachment{
 		.extent = vuk::Dimension3D::absolute(
 			sys::s_vulkan->swapchain->extent.width,
 			sys::s_vulkan->swapchain->extent.height
 		),
-		.format = vuk::Format::eR8G8B8A8Unorm,
+		.format = vuk::Format::eR16Sfloat,
+		.sample_count = vuk::Samples::e1,
+		.level_count = 1,
+		.layer_count = 1,
+	});
+	rg->attach_image("seed/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(
+			sys::s_vulkan->swapchain->extent.width,
+			sys::s_vulkan->swapchain->extent.height
+		),
+		.format = vuk::Format::eR32Uint,
+		.sample_count = vuk::Samples::e1,
+		.level_count = 1,
+		.layer_count = 1,
+	});
+	rg->attach_image("motion/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(
+			sys::s_vulkan->swapchain->extent.width,
+			sys::s_vulkan->swapchain->extent.height
+		),
+		.format = vuk::Format::eR16G16Sfloat,
 		.sample_count = vuk::Samples::e1,
 		.level_count = 1,
 		.layer_count = 1,
 	});
 	rg->attach_swapchain("swapchain", sys::s_vulkan->swapchain);
 	rg->add_pass(vuk::Pass{
-		.name = "raytracing",
+		.name = "first bounce",
 		.resources = {
-			"rt/blank"_image >> vuk::eComputeWrite >> "rt/out",
+			"visibility/blank"_image >> vuk::eComputeWrite >> "visibility",
+			"depth/blank"_image >> vuk::eComputeWrite >> "depth",
+			"seed/blank"_image >> vuk::eComputeWrite >> "seed",
+			"motion/blank"_image >> vuk::eComputeWrite >> "motion",
 		},
 		.execute = [&_camera](vuk::CommandBuffer& cmd) {
-			cmd.bind_compute_pipeline("shader_comp")
-				.bind_image(0, 0, "rt/blank");
+			cmd.bind_compute_pipeline("first_bounce_comp")
+				.bind_image(0, 0, "visibility/blank")
+				.bind_image(0, 1, "depth/blank")
+				.bind_image(0, 2, "seed/blank")
+				.bind_image(0, 3, "motion/blank");
 
 			struct Constants {
-				mat4 View;
-				uint FrameCounter;
+				mat4 view;
+				uint frameCounter;
+				float vFov;
 			};
 			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
-				.View = _camera.view(),
-				.FrameCounter = uint(sys::s_vulkan->context.get_frame_count()),
+				.view = _camera.view(),
+				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
+				.vFov = 90_deg,
 			});
 
 			cmd.dispatch_invocations(
@@ -85,7 +116,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 				sys::s_vulkan->swapchain->extent.height
 			);
 		},
-	});
+	});/*
 	rg->add_pass(vuk::Pass{
 		.name = "tonemapping",
 		.resources = {
@@ -107,17 +138,17 @@ void Renderer::draw(gfx::Camera const& _camera) {
 				sys::s_vulkan->swapchain->extent.height
 			);
 		},
-	});
+	});*/
 	rg->add_pass(vuk::Pass{
 		.name = "swapchain blit",
 		.resources = {
-			"tonemapped/out"_image >> vuk::eTransferRead,
+			"depth"_image >> vuk::eTransferRead,
 			"swapchain"_image >> vuk::eTransferWrite >> "swapchain/out",
 		},
 		.execute = [](vuk::CommandBuffer& cmd) {
-			auto srcSize = cmd.get_resource_image_attachment("tonemapped/out").value().extent.extent;
+			auto srcSize = cmd.get_resource_image_attachment("depth").value().extent.extent;
 			auto dstSize = cmd.get_resource_image_attachment("swapchain").value().extent.extent;
-			cmd.blit_image("tonemapped/out", "swapchain", vuk::ImageBlit{
+			cmd.blit_image("depth", "swapchain", vuk::ImageBlit{
 				.srcSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
 				.srcOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(srcSize.width), int(srcSize.height), 1}},
 				.dstSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },

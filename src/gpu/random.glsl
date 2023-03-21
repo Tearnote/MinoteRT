@@ -27,7 +27,7 @@ uint pcg(inout uint v) {
 }
 
 float randomFloat(inout uint state) {
-    return (pcg(state) & 0xFFFFFFu) / 16777216.0f;
+    return (pcg(state) & 0xFFFFFFu) / 16777216.0;
 }
 
 
