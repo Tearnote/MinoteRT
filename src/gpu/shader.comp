@@ -81,21 +81,20 @@ void main() {
 	const vec3 VerticalSpan = {0, 0, ViewportSize.y};
 	const vec3 LowerLeftCorner = vec3(0) - HorizontalSpan / 2 - VerticalSpan / 2 - vec3(0, FocalLength, 0);
 
-	// Starting ray
+	// Camera ray
 	const vec2 Pitch = vec2(1.0) / vec2(DstSize - 1);
 	vec2 uv = (vec2(Gid) + 0.5) * Pitch;
 	uv.y = 1.0 - uv.y;
+	Ray ray;
+	ray.origin = (C.View * vec4(0, 0, 0, 1)).xyz;
 
 	// Rendering
-	const uint Samples = 32;
+	const uint Samples = 1;
 	const uint MaxBounces = 4;
 	vec3 colorOut = {0, 0, 0};
 	for (uint i = 0; i < Samples; i += 1) {
 		// Camera ray
-		vec2 randomOffset = {randomFloat(rngState), randomFloat(rngState)};
-		vec2 suv = uv + (randomOffset - 0.5) * Pitch;
-		Ray ray = {vec3(0), LowerLeftCorner + suv.x * HorizontalSpan + suv.y * VerticalSpan};
-		ray.origin = (C.View * vec4(ray.origin, 1)).xyz;
+		ray.direction = LowerLeftCorner + uv.x * HorizontalSpan + uv.y * VerticalSpan;
 		ray.direction = (C.View * vec4(ray.direction, 0)).xyz;
 		colorOut += tonemap(traceRay(ray, MaxBounces, rngState));
 	}

@@ -31,13 +31,6 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		shaderPci.add_static_spirv(shaderSource.data(), shaderSource.size(), "shader.comp");
 		sys::s_vulkan->context.create_named_pipeline("shader_comp", shaderPci);
 
-		auto denoisePci = vuk::PipelineBaseCreateInfo();
-		constexpr auto denoiseSource = std::to_array<uint>({
-#include "spv/denoise.comp.spv"
-		});
-		denoisePci.add_static_spirv(denoiseSource.data(), denoiseSource.size(), "denoise.comp");
-		sys::s_vulkan->context.create_named_pipeline("denoise", denoisePci);
-
 		auto tonemapPci = vuk::PipelineBaseCreateInfo();
 		constexpr auto tonemapSource = std::to_array<uint>({
 #include "spv/tonemap.comp.spv"
@@ -49,16 +42,6 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	// Create a rendergraph
 	auto rg = std::make_shared<vuk::RenderGraph>("simple");
 	rg->attach_image("rt/blank", vuk::ImageAttachment{
-		.extent = vuk::Dimension3D::absolute(
-			sys::s_vulkan->swapchain->extent.width,
-			sys::s_vulkan->swapchain->extent.height
-		),
-		.format = vuk::Format::eR16G16B16A16Sfloat,
-		.sample_count = vuk::Samples::e1,
-		.level_count = 1,
-		.layer_count = 1,
-	});
-	rg->attach_image("denoised/blank", vuk::ImageAttachment{
 		.extent = vuk::Dimension3D::absolute(
 			sys::s_vulkan->swapchain->extent.width,
 			sys::s_vulkan->swapchain->extent.height
@@ -104,36 +87,14 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		},
 	});
 	rg->add_pass(vuk::Pass{
-		.name = "denoising",
-		.resources = {
-			"rt/out"_image >> vuk::eComputeSampled,
-			"denoised/blank"_image >> vuk::eComputeWrite >> "denoised/out",
-		},
-		.execute = [](vuk::CommandBuffer& cmd) {
-			cmd.bind_compute_pipeline("denoise")
-				.bind_image(0, 0, "rt/out").bind_sampler(0, 0, vuk::SamplerCreateInfo{
-					.magFilter = vuk::Filter::eLinear,
-					.minFilter = vuk::Filter::eLinear,
-					.addressModeU = vuk::SamplerAddressMode::eClampToEdge,
-					.addressModeV = vuk::SamplerAddressMode::eClampToEdge,
-				})
-				.bind_image(0, 1, "denoised/blank");
-
-			cmd.dispatch_invocations(
-				sys::s_vulkan->swapchain->extent.width,
-				sys::s_vulkan->swapchain->extent.height
-			);
-		},
-	});
-	rg->add_pass(vuk::Pass{
 		.name = "tonemapping",
 		.resources = {
-			"denoised/out"_image >> vuk::eComputeSampled,
+			"rt/out"_image >> vuk::eComputeSampled,
 			"tonemapped/blank"_image >> vuk::eComputeWrite >> "tonemapped/out",
 		},
 		.execute = [](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("tonemap")
-				.bind_image(0, 0, "denoised/out").bind_sampler(0, 0, vuk::SamplerCreateInfo{
+				.bind_image(0, 0, "rt/out").bind_sampler(0, 0, vuk::SamplerCreateInfo{
 					.magFilter = vuk::Filter::eLinear,
 					.minFilter = vuk::Filter::eLinear,
 					.addressModeU = vuk::SamplerAddressMode::eClampToEdge,
