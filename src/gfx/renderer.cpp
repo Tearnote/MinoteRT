@@ -31,12 +31,12 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	// Compile shaders
 	static auto shadersCompiled = false;
 	if(!shadersCompiled) {
-		auto firstBouncePci = vuk::PipelineBaseCreateInfo();
-		constexpr auto firstBounceSource = std::to_array<uint>({
-#include "spv/firstBounce.comp.spv"
+		auto primaryRayPci = vuk::PipelineBaseCreateInfo();
+		constexpr auto primaryRaySource = std::to_array<uint>({
+#include "spv/primaryRay.comp.spv"
 		});
-		firstBouncePci.add_static_spirv(firstBounceSource.data(), firstBounceSource.size(), "shader.comp");
-		sys::s_vulkan->context.create_named_pipeline("first_bounce_comp", firstBouncePci);
+		primaryRayPci.add_static_spirv(primaryRaySource.data(), primaryRaySource.size(), "primaryRay.comp");
+		sys::s_vulkan->context.create_named_pipeline("primary_ray", primaryRayPci);
 
 		auto tonemapPci = vuk::PipelineBaseCreateInfo();
 		constexpr auto tonemapSource = std::to_array<uint>({
@@ -100,7 +100,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	});
 	rg->attach_swapchain("swapchain", sys::s_vulkan->swapchain);
 	rg->add_pass(vuk::Pass{
-		.name = "first bounce",
+		.name = "primary rays",
 		.resources = {
 			"visibility/blank"_image >> vuk::eComputeWrite >> "visibility",
 			"depth/blank"_image >> vuk::eComputeWrite >> "depth",
@@ -109,7 +109,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 			"motion/blank"_image >> vuk::eComputeWrite >> "motion",
 		},
 		.execute = [this, &_camera](vuk::CommandBuffer& cmd) {
-			cmd.bind_compute_pipeline("first_bounce_comp")
+			cmd.bind_compute_pipeline("primary_ray")
 				.bind_image(0, 0, "visibility/blank")
 				.bind_image(0, 1, "depth/blank")
 				.bind_image(0, 2, "normal/blank")

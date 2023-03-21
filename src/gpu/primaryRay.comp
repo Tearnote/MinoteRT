@@ -66,22 +66,22 @@ void main() {
     ray.origin = CameraOrigin;
     ray.direction = LowerLeftCorner + outUv.x * HorizontalSpan + outUv.y * VerticalSpan;
     ray.direction = (C.view * vec4(ray.direction, 0)).xyz;
-    Intersection firstBounce = tracePrimaryRay(ray);
+    Intersection primaryHit = tracePrimaryRay(ray);
 
     // Write out
-    imageStore(i_visibility, ivec2(Gid), uvec4(firstBounce.primitiveId));
+    imageStore(i_visibility, ivec2(Gid), uvec4(primaryHit.primitiveId));
 
     vec3 CameraDirection = vec3(C.view * vec4(0.0, -FocalLength, 0.0, 0.0));
-    float linearDepth = dot(firstBounce.position - ray.origin, CameraDirection);
+    float linearDepth = dot(primaryHit.position - ray.origin, CameraDirection);
     imageStore(i_depth, ivec2(Gid), vec4(linearDepth));
 
-    vec3 normal = normalize(firstBounce.position - Spheres[firstBounce.primitiveId].center);
+    vec3 normal = normalize(primaryHit.position - Spheres[primaryHit.primitiveId].center);
     imageStore(i_normal, ivec2(Gid), vec4(normal, 0.0));
 
     uint seed = (Gid.x * 1973u + Gid.y * 9277u + C.frameCounter * 26699u) | 1u;
     imageStore(i_seed, ivec2(Gid), uvec4(seed));
 
-    vec3 hitPos = firstBounce.position;
+    vec3 hitPos = primaryHit.position;
     vec3 prevViewSpaceHit = vec3(inverse(C.prevView) * vec4(hitPos, 1.0));
     vec2 prevViewportPos = (prevViewSpaceHit / (prevViewSpaceHit.y * -FocalLength)).xz;
     vec2 prevUv = prevViewportPos / ViewportSize + 0.5;
