@@ -21,6 +21,7 @@ private:
 
 	vuk::DeviceSuperFrameResource m_deviceResource;
 	vuk::Allocator m_multiFrameAllocator;
+	gfx::Camera m_prevCamera;
 
 };
 

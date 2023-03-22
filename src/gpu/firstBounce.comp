@@ -10,8 +10,9 @@ layout(binding = 0) restrict uniform uimage2D i_visibility;
 layout(binding = 1) restrict uniform image2D i_depth;
 layout(binding = 2) restrict uniform uimage2D i_seed;
 layout(binding = 3) restrict uniform image2D i_motion;
-layout(push_constant) uniform Constants {
+layout(binding = 4) uniform Constants {
     mat4 view;
+    mat4 prevView;
     uint frameCounter;
     float vFov;
 } C;

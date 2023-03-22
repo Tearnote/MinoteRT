@@ -24,6 +24,10 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	auto& frameResource = m_deviceResource.get_next_frame();
 	auto frameAllocator = vuk::Allocator(frameResource);
 
+	// Initial temporal resource values
+	if (sys::s_vulkan->context.get_frame_count() == 1)
+		m_prevCamera = _camera;
+
 	// Compile shaders
 	static auto shadersCompiled = false;
 	if(!shadersCompiled) {
@@ -93,7 +97,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 			"seed/blank"_image >> vuk::eComputeWrite >> "seed",
 			"motion/blank"_image >> vuk::eComputeWrite >> "motion",
 		},
-		.execute = [&_camera](vuk::CommandBuffer& cmd) {
+		.execute = [this, &_camera](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("first_bounce_comp")
 				.bind_image(0, 0, "visibility/blank")
 				.bind_image(0, 1, "depth/blank")
@@ -102,14 +106,17 @@ void Renderer::draw(gfx::Camera const& _camera) {
 
 			struct Constants {
 				mat4 view;
+				mat4 prevView;
 				uint frameCounter;
 				float vFov;
 			};
-			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
+			auto* constants = cmd.map_scratch_buffer<Constants>(0, 4);
+			*constants = Constants{
 				.view = _camera.view(),
+				.prevView = m_prevCamera.view(),
 				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
 				.vFov = 90_deg,
-			});
+			};
 
 			cmd.dispatch_invocations(
 				sys::s_vulkan->swapchain->extent.width,
@@ -163,6 +170,9 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	auto acquireBundle = *vuk::acquire_one(frameAllocator, sys::s_vulkan->swapchain);
 	auto submitBundle = *vuk::execute_submit(frameAllocator, std::move(erg), std::move(acquireBundle));
 	vuk::present_to_one(sys::s_vulkan->context, std::move(submitBundle));
+
+	// Temporal preservation
+	m_prevCamera = _camera;
 
 }
 
