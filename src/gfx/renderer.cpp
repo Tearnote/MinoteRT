@@ -68,6 +68,16 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		.level_count = 1,
 		.layer_count = 1,
 	});
+	rg->attach_image("normal/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(
+			sys::s_vulkan->swapchain->extent.width,
+			sys::s_vulkan->swapchain->extent.height
+		),
+		.format = vuk::Format::eR16G16B16A16Sfloat, // w unused
+		.sample_count = vuk::Samples::e1,
+		.level_count = 1,
+		.layer_count = 1,
+	});
 	rg->attach_image("seed/blank", vuk::ImageAttachment{
 		.extent = vuk::Dimension3D::absolute(
 			sys::s_vulkan->swapchain->extent.width,
@@ -94,6 +104,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		.resources = {
 			"visibility/blank"_image >> vuk::eComputeWrite >> "visibility",
 			"depth/blank"_image >> vuk::eComputeWrite >> "depth",
+			"normal/blank"_image >> vuk::eComputeWrite >> "normal",
 			"seed/blank"_image >> vuk::eComputeWrite >> "seed",
 			"motion/blank"_image >> vuk::eComputeWrite >> "motion",
 		},
@@ -101,8 +112,9 @@ void Renderer::draw(gfx::Camera const& _camera) {
 			cmd.bind_compute_pipeline("first_bounce_comp")
 				.bind_image(0, 0, "visibility/blank")
 				.bind_image(0, 1, "depth/blank")
-				.bind_image(0, 2, "seed/blank")
-				.bind_image(0, 3, "motion/blank");
+				.bind_image(0, 2, "normal/blank")
+				.bind_image(0, 3, "seed/blank")
+				.bind_image(0, 4, "motion/blank");
 
 			struct Constants {
 				mat4 view;
@@ -110,7 +122,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 				uint frameCounter;
 				float vFov;
 			};
-			auto* constants = cmd.map_scratch_buffer<Constants>(0, 4);
+			auto* constants = cmd.map_scratch_buffer<Constants>(0, 5);
 			*constants = Constants{
 				.view = _camera.view(),
 				.prevView = m_prevCamera.view(),
@@ -149,13 +161,13 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	rg->add_pass(vuk::Pass{
 		.name = "swapchain blit",
 		.resources = {
-			"depth"_image >> vuk::eTransferRead,
+			"normal"_image >> vuk::eTransferRead,
 			"swapchain"_image >> vuk::eTransferWrite >> "swapchain/out",
 		},
 		.execute = [](vuk::CommandBuffer& cmd) {
-			auto srcSize = cmd.get_resource_image_attachment("depth").value().extent.extent;
+			auto srcSize = cmd.get_resource_image_attachment("normal").value().extent.extent;
 			auto dstSize = cmd.get_resource_image_attachment("swapchain").value().extent.extent;
-			cmd.blit_image("depth", "swapchain", vuk::ImageBlit{
+			cmd.blit_image("normal", "swapchain", vuk::ImageBlit{
 				.srcSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
 				.srcOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(srcSize.width), int(srcSize.height), 1}},
 				.dstSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
