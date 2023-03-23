@@ -115,7 +115,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 				.view = _camera.view(),
 				.prevView = m_prevCamera.view(),
 				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
-				.vFov = 90_deg,
+				.vFov = 60_deg,
 			};
 
 			cmd.dispatch_invocations(

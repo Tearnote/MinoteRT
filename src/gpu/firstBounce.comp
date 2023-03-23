@@ -1,6 +1,7 @@
 #version 460
 #pragma shader_stage(compute)
 #extension GL_EXT_shader_image_load_formatted: enable
+#extension GL_EXT_debug_printf: enable
 
 #include "intersect.glsl"
 
@@ -45,8 +46,8 @@ void main() {
     if (any(greaterThanEqual(Gid, OutBounds))) return;
 
     const vec2 OutPitch = vec2(1.0) / vec2(OutBounds);
-    vec2 outUV = (vec2(Gid) + 0.5) * OutPitch;
-    outUV.y = 1.0 - outUV.y;
+    vec2 outUv = (vec2(Gid) + 0.5) * OutPitch;
+    outUv.y = 1.0 - outUv.y;
 
     // Viewport
     const float AspectRatio = float(OutBounds.x) / float(OutBounds.y);
@@ -59,12 +60,12 @@ void main() {
     const vec3 HorizontalSpan = {ViewportSize.x, 0.0, 0.0};
     const vec3 VerticalSpan = {0.0, 0.0, ViewportSize.y};
     const vec3 LowerLeftCorner = vec3(0.0) - HorizontalSpan / 2.0 - VerticalSpan / 2.0 - vec3(0.0, FocalLength, 0.0);
-    const vec3 CameraOrigin = (C.view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    const vec3 CameraOrigin = vec3(C.view * vec4(0.0, 0.0, 0.0, 1.0));
 
     // Fire primary ray
     Ray ray;
     ray.origin = CameraOrigin;
-    ray.direction = LowerLeftCorner + outUV.x * HorizontalSpan + outUV.y * VerticalSpan;
+    ray.direction = LowerLeftCorner + outUv.x * HorizontalSpan + outUv.y * VerticalSpan;
     ray.direction = (C.view * vec4(ray.direction, 0)).xyz;
     Intersection firstBounce = tracePrimaryRay(ray);
 
@@ -78,6 +79,9 @@ void main() {
     uint seed = (Gid.x * 1973u + Gid.y * 9277u + C.frameCounter * 26699u) | 1u;
     imageStore(i_seed, ivec2(Gid), uvec4(seed));
 
-    //TODO
-    imageStore(i_motion, ivec2(Gid), vec4(0.0));
+    vec3 hitPos = firstBounce.position;
+    vec3 prevViewSpaceHit = vec3(inverse(C.prevView) * vec4(hitPos, 1.0));
+    vec2 prevViewportPos = (prevViewSpaceHit / (prevViewSpaceHit.y * -FocalLength)).xz;
+    vec2 prevUv = prevViewportPos / ViewportSize + 0.5;
+    imageStore(i_motion, ivec2(Gid), vec4((outUv - prevUv) / OutPitch, 0.0, 0.0));
 }
