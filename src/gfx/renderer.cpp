@@ -9,6 +9,7 @@
 #include "math.hpp"
 #include "sys/vulkan.hpp"
 #include "gfx/samplers.hpp"
+#include "gfx/modules/tonemap.hpp"
 
 namespace minote::gfx {
 
@@ -45,13 +46,6 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		});
 		secondaryRaysPci.add_static_spirv(secondaryRaysSource.data(), secondaryRaysSource.size(), "secondaryRays.comp");
 		sys::s_vulkan->context.create_named_pipeline("secondary_rays", secondaryRaysPci);
-
-		auto tonemapPci = vuk::PipelineBaseCreateInfo();
-		constexpr auto tonemapSource = std::to_array<uint>({
-#include "spv/tonemap.comp.spv"
-		});
-		tonemapPci.add_static_spirv(tonemapSource.data(), tonemapSource.size(), "tonemap.comp");
-		sys::s_vulkan->context.create_named_pipeline("tonemap", tonemapPci);
 	}
 
 	// Create a rendergraph
@@ -126,7 +120,6 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		.level_count = 1,
 		.layer_count = 1,
 	});
-	rg->attach_swapchain("swapchain", sys::s_vulkan->swapchain);
 	rg->add_pass(vuk::Pass{
 		.name = "primary rays",
 		.resources = {
@@ -197,38 +190,23 @@ void Renderer::draw(gfx::Camera const& _camera) {
 			);
 		},
 	});
-	rg->add_pass(vuk::Pass{
-		.name = "tonemapping",
-		.resources = {
-			"color"_image >> vuk::eComputeSampled,
-			"tonemapped/blank"_image >> vuk::eComputeWrite >> "tonemapped",
-		},
-		.execute = [](vuk::CommandBuffer& cmd) {
-			cmd.bind_compute_pipeline("tonemap")
-				.bind_image(0, 0, "color").bind_sampler(0, 0, vuk::SamplerCreateInfo{
-					.magFilter = vuk::Filter::eLinear,
-					.minFilter = vuk::Filter::eLinear,
-					.addressModeU = vuk::SamplerAddressMode::eClampToEdge,
-					.addressModeV = vuk::SamplerAddressMode::eClampToEdge,
-				})
-				.bind_image(0, 1, "tonemapped/blank");
 
-			cmd.dispatch_invocations(
-				sys::s_vulkan->swapchain->extent.width,
-				sys::s_vulkan->swapchain->extent.height
-			);
-		},
-	});
+	auto raytraced = vuk::Future(std::move(rg), "color");
+	auto tonemapped = modules::tonemap(std::move(raytraced));
+	rg = std::make_shared<vuk::RenderGraph>();
+	rg->attach_in("tonemapped", tonemapped);
+	rg->attach_swapchain("swapchain/blank", sys::s_vulkan->swapchain);
+
 	rg->add_pass(vuk::Pass{
 		.name = "swapchain blit",
 		.resources = {
 			"tonemapped"_image >> vuk::eTransferRead,
-			"swapchain"_image >> vuk::eTransferWrite >> "swapchain/out",
+			"swapchain/blank"_image >> vuk::eTransferWrite >> "swapchain",
 		},
 		.execute = [](vuk::CommandBuffer& cmd) {
 			auto srcSize = cmd.get_resource_image_attachment("tonemapped").value().extent.extent;
-			auto dstSize = cmd.get_resource_image_attachment("swapchain").value().extent.extent;
-			cmd.blit_image("tonemapped", "swapchain", vuk::ImageBlit{
+			auto dstSize = cmd.get_resource_image_attachment("swapchain/blank").value().extent.extent;
+			cmd.blit_image("tonemapped", "swapchain/blank", vuk::ImageBlit{
 				.srcSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
 				.srcOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(srcSize.width), int(srcSize.height), 1}},
 				.dstSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
