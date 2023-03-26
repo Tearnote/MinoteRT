@@ -75,7 +75,11 @@ void main() {
     float linearDepth = dot(primaryHit.position - ray.origin, CameraDirection);
     imageStore(i_depth, ivec2(Gid), vec4(linearDepth));
 
-    vec3 normal = normalize(primaryHit.position - Spheres[primaryHit.primitiveId].center);
+    vec3 normal;
+    if (primaryHit.primitiveId != -1u)
+        normal = normalize(primaryHit.position - Spheres[primaryHit.primitiveId].center);
+    else
+        normal = ray.direction;
     imageStore(i_normal, ivec2(Gid), vec4(normal, 0.0));
 
     uint seed = (Gid.x * 1973u + Gid.y * 9277u + C.frameCounter * 26699u) | 1u;

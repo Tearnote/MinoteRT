@@ -8,6 +8,7 @@
 
 #include "math.hpp"
 #include "sys/vulkan.hpp"
+#include "gfx/samplers.hpp"
 
 namespace minote::gfx {
 
@@ -37,6 +38,13 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		});
 		primaryRayPci.add_static_spirv(primaryRaySource.data(), primaryRaySource.size(), "primaryRay.comp");
 		sys::s_vulkan->context.create_named_pipeline("primary_ray", primaryRayPci);
+
+		auto secondaryRaysPci = vuk::PipelineBaseCreateInfo();
+		constexpr auto secondaryRaysSource = std::to_array<uint>({
+#include "spv/secondaryRays.comp.spv"
+		});
+		secondaryRaysPci.add_static_spirv(secondaryRaysSource.data(), secondaryRaysSource.size(), "secondaryRays.comp");
+		sys::s_vulkan->context.create_named_pipeline("secondary_rays", secondaryRaysPci);
 
 		auto tonemapPci = vuk::PipelineBaseCreateInfo();
 		constexpr auto tonemapSource = std::to_array<uint>({
@@ -98,6 +106,26 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		.level_count = 1,
 		.layer_count = 1,
 	});
+	rg->attach_image("color/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(
+			sys::s_vulkan->swapchain->extent.width,
+			sys::s_vulkan->swapchain->extent.height
+		),
+		.format = vuk::Format::eR16G16B16A16Sfloat,
+		.sample_count = vuk::Samples::e1,
+		.level_count = 1,
+		.layer_count = 1,
+	});
+	rg->attach_image("tonemapped/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(
+			sys::s_vulkan->swapchain->extent.width,
+			sys::s_vulkan->swapchain->extent.height
+		),
+		.format = vuk::Format::eR8G8B8A8Unorm,
+		.sample_count = vuk::Samples::e1,
+		.level_count = 1,
+		.layer_count = 1,
+	});
 	rg->attach_swapchain("swapchain", sys::s_vulkan->swapchain);
 	rg->add_pass(vuk::Pass{
 		.name = "primary rays",
@@ -135,16 +163,49 @@ void Renderer::draw(gfx::Camera const& _camera) {
 				sys::s_vulkan->swapchain->extent.height
 			);
 		},
-	});/*
+	});
+	rg->add_pass(vuk::Pass{
+		.name = "secondary rays",
+		.resources = {
+			"visibility"_image >> vuk::eComputeSampled,
+			"depth"_image >> vuk::eComputeSampled,
+			"normal"_image >> vuk::eComputeSampled,
+			"seed"_image >> vuk::eComputeSampled,
+			"color/blank"_image >> vuk::eComputeWrite >> "color",
+		},
+		.execute = [&_camera](vuk::CommandBuffer& cmd) {
+			cmd.bind_compute_pipeline("secondary_rays")
+				.bind_image(0, 0, "visibility/blank").bind_sampler(0, 0, NearestClamp)
+				.bind_image(0, 1, "depth/blank").bind_sampler(0, 1, NearestClamp)
+				.bind_image(0, 2, "normal/blank").bind_sampler(0, 2, NearestClamp)
+				.bind_image(0, 3, "seed/blank").bind_sampler(0, 3, NearestClamp)
+				.bind_image(0, 4, "color/blank");
+
+			struct Constants {
+				mat4 view;
+				float vFov;
+			};
+			auto* constants = cmd.map_scratch_buffer<Constants>(0, 5);
+			*constants = Constants{
+				.view = _camera.view(),
+				.vFov = 60_deg,
+			};
+
+			cmd.dispatch_invocations(
+				sys::s_vulkan->swapchain->extent.width,
+				sys::s_vulkan->swapchain->extent.height
+			);
+		},
+	});
 	rg->add_pass(vuk::Pass{
 		.name = "tonemapping",
 		.resources = {
-			"rt/out"_image >> vuk::eComputeSampled,
-			"tonemapped/blank"_image >> vuk::eComputeWrite >> "tonemapped/out",
+			"color"_image >> vuk::eComputeSampled,
+			"tonemapped/blank"_image >> vuk::eComputeWrite >> "tonemapped",
 		},
 		.execute = [](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("tonemap")
-				.bind_image(0, 0, "rt/out").bind_sampler(0, 0, vuk::SamplerCreateInfo{
+				.bind_image(0, 0, "color").bind_sampler(0, 0, vuk::SamplerCreateInfo{
 					.magFilter = vuk::Filter::eLinear,
 					.minFilter = vuk::Filter::eLinear,
 					.addressModeU = vuk::SamplerAddressMode::eClampToEdge,
@@ -157,17 +218,17 @@ void Renderer::draw(gfx::Camera const& _camera) {
 				sys::s_vulkan->swapchain->extent.height
 			);
 		},
-	});*/
+	});
 	rg->add_pass(vuk::Pass{
 		.name = "swapchain blit",
 		.resources = {
-			"normal"_image >> vuk::eTransferRead,
+			"tonemapped"_image >> vuk::eTransferRead,
 			"swapchain"_image >> vuk::eTransferWrite >> "swapchain/out",
 		},
 		.execute = [](vuk::CommandBuffer& cmd) {
-			auto srcSize = cmd.get_resource_image_attachment("normal").value().extent.extent;
+			auto srcSize = cmd.get_resource_image_attachment("tonemapped").value().extent.extent;
 			auto dstSize = cmd.get_resource_image_attachment("swapchain").value().extent.extent;
-			cmd.blit_image("normal", "swapchain", vuk::ImageBlit{
+			cmd.blit_image("tonemapped", "swapchain", vuk::ImageBlit{
 				.srcSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
 				.srcOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(srcSize.width), int(srcSize.height), 1}},
 				.dstSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },

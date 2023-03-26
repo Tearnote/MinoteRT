@@ -1,0 +1,105 @@
+#version 460
+#pragma shader_stage(compute)
+
+#include "intersect.glsl"
+#include "random.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform usampler2D s_visibility;
+layout(binding = 1) uniform sampler2D s_depth;
+layout(binding = 2) uniform sampler2D s_normal;
+layout(binding = 3) uniform usampler2D s_seed;
+layout(binding = 4) restrict writeonly uniform image2D i_color;
+layout(binding = 5) uniform Constants {
+	mat4 view;
+	float vFov;
+} C;
+
+const uint SphereCount = 2;
+const Sphere Spheres[SphereCount] = {
+	{{0, -1,      0}, 0.5, {0.2, 0.7, 0.0}},
+	{{0, -1, -100.5}, 100, {0.2, 0.2, 0.2}}
+};
+
+vec3 skyColor(vec3 dir) {
+	float t = 0.5 * (dir.z + 1.0);
+	return (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
+}
+
+vec3 traceSecondaryRays(Intersection primaryHit, uint maxDepth, inout uint rngState) {
+
+	vec3 color = vec3(1.0);
+	Intersection closestHit = primaryHit;
+	for (uint i = 0; i < maxDepth; i += 1) {
+		if (i > 0) {
+			// Formulate ray
+			Ray ray;
+			ray.origin = closestHit.position + closestHit.normal * 0.001;
+			ray.direction = normalize(closestHit.normal + randomSpherePoint(vec3(randomFloat(rngState), randomFloat(rngState), randomFloat(rngState)) * 2.0 - 1.0));
+
+			// Find closest hit
+			closestHit.primitiveId = -1u;
+			closestHit.t = -1.0;
+			for (uint i = 0u; i < SphereCount; i += 1u) {
+				float t = raySphereIntersect(ray, Spheres[i]);
+				if (t >= 0.0 && (t < closestHit.t || closestHit.t < 0.0)) {
+					closestHit.primitiveId = i;
+					closestHit.t = t;
+				}
+			}
+			if (closestHit.primitiveId != -1u) {
+				closestHit.position = rayAt(ray, closestHit.t);
+				closestHit.normal = normalize(closestHit.position - Spheres[closestHit.primitiveId].center);
+			}
+		}
+
+		// Return or spawn secondary ray
+		if (closestHit.primitiveId != -1u) {
+			color *= Spheres[closestHit.primitiveId].albedo;
+		} else {
+			return color * skyColor(closestHit.normal);
+		}
+	}
+	return vec3(0.0);
+}
+
+void main() {
+	// Output details
+	const uvec2 Gid = gl_GlobalInvocationID.xy;
+	const uvec2 OutBounds = uvec2(textureSize(s_visibility, 0));
+	if (any(greaterThanEqual(Gid, OutBounds))) return;
+
+	const vec2 OutPitch = vec2(1.0) / vec2(OutBounds);
+	vec2 outUv = (vec2(Gid) + 0.5) * OutPitch;
+	outUv.y = 1.0 - outUv.y;
+
+	// Viewport
+	const float AspectRatio = float(OutBounds.x) / float(OutBounds.y);
+	const float FocalLength = 1.0;
+	const float ViewportHeight = 2.0 * tan(C.vFov / 2.0);
+	const float ViewportWidth = AspectRatio * ViewportHeight;
+	const vec2 ViewportSize = { ViewportWidth, ViewportHeight };
+
+	// Camera
+	const vec3 HorizontalSpan = { ViewportSize.x, 0.0, 0.0 };
+	const vec3 VerticalSpan = { 0.0, 0.0, ViewportSize.y };
+	const vec3 LowerLeftCorner = vec3(0.0) - HorizontalSpan / 2.0 - VerticalSpan / 2.0 - vec3(0.0, FocalLength, 0.0);
+	const vec3 CameraOrigin = vec3(C.view * vec4(0.0, 0.0, 0.0, 1.0));
+
+	// Reconstruct primary hit
+	Intersection primaryHit;
+	primaryHit.primitiveId = texelFetch(s_visibility, ivec2(Gid), 0).x;
+	primaryHit.normal = texelFetch(s_normal, ivec2(Gid), 0).xyz;
+	float linearDepth = texelFetch(s_depth, ivec2(Gid), 0).x;
+	vec2 cameraUv = (outUv * 2.0 - 1.0) * (ViewportSize / 2.0);
+	vec2 uvScaled = cameraUv * (linearDepth / FocalLength);
+	vec3 viewPosition = {uvScaled.x, -linearDepth, uvScaled.y};
+	primaryHit.position = vec3(C.view * vec4(viewPosition, 1.0));
+	primaryHit.t = length(primaryHit.position - CameraOrigin);
+	uint seed = texelFetch(s_seed, ivec2(Gid), 0).x;
+
+	// Fire secondary rays
+	vec3 color = traceSecondaryRays(primaryHit, 40, seed);
+	imageStore(i_color, ivec2(Gid), vec4(color, 1.0));
+}
