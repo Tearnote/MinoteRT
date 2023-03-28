@@ -26,16 +26,17 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	sys::s_vulkan->context.next_frame();
 	auto& frameResource = m_deviceResource.get_next_frame();
 	auto frameAllocator = vuk::Allocator(frameResource);
+	auto outputSize = uvec2{
+		sys::s_vulkan->swapchain->extent.width,
+		sys::s_vulkan->swapchain->extent.height
+	};
 
 	// Initial temporal resource values
 	if (sys::s_vulkan->context.get_frame_count() == 1)
 		m_prevCamera = _camera;
 
 	// Create a rendergraph
-	auto gbuffer = modules::primaryRays(uvec2{
-		sys::s_vulkan->swapchain->extent.width,
-	    sys::s_vulkan->swapchain->extent.height
-	}, _camera, m_prevCamera);
+	auto gbuffer = modules::primaryRays(outputSize, _camera, m_prevCamera);
 	auto pathtraced = modules::secondaryRays(std::move(gbuffer), _camera);
 	auto tonemapped = modules::tonemap(std::move(pathtraced));
 
@@ -49,14 +50,12 @@ void Renderer::draw(gfx::Camera const& _camera) {
 			"tonemapped"_image >> vuk::eTransferRead,
 			"swapchain/blank"_image >> vuk::eTransferWrite >> "swapchain",
 		},
-		.execute = [](vuk::CommandBuffer& cmd) {
-			auto srcSize = cmd.get_resource_image_attachment("tonemapped").value().extent.extent;
-			auto dstSize = cmd.get_resource_image_attachment("swapchain/blank").value().extent.extent;
+		.execute = [outputSize](vuk::CommandBuffer& cmd) {
 			cmd.blit_image("tonemapped", "swapchain/blank", vuk::ImageBlit{
 				.srcSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
-				.srcOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(srcSize.width), int(srcSize.height), 1}},
+				.srcOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(outputSize.x()), int(outputSize.y()), 1}},
 				.dstSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
-				.dstOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(dstSize.width), int(dstSize.height), 1}} },
+				.dstOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(outputSize.x()), int(outputSize.y()), 1}} },
 			vuk::Filter::eNearest);
 		},
 	});
