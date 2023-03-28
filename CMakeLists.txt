@@ -28,6 +28,7 @@ include(cmake/Dependencies.cmake)
 
 ### Main executable
 add_executable(MinoteRT
+	src/gfx/modules/pathtrace.hpp src/gfx/modules/pathtrace.cpp
 	src/gfx/modules/tonemap.hpp src/gfx/modules/tonemap.cpp
 	src/gfx/renderer.hpp src/gfx/renderer.cpp
 	src/gfx/camera.hpp src/gfx/camera.cpp

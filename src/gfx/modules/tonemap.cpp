@@ -2,10 +2,12 @@
 
 #include <utility>
 #include <memory>
+#include <array>
 
 #include <vuk/CommandBuffer.hpp>
 #include <vuk/RenderGraph.hpp>
 
+#include "types.hpp"
 #include "sys/vulkan.hpp"
 #include "gfx/samplers.hpp"
 
