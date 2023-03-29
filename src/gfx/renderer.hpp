@@ -3,7 +3,8 @@
 #include <vuk/Allocator.hpp>
 #include <vuk/resources/DeviceFrameResource.hpp>
 
-#include "camera.hpp"
+#include "gfx/camera.hpp"
+#include "gfx/imgui.hpp"
 
 namespace minote::gfx {
 
@@ -22,6 +23,7 @@ private:
 	vuk::DeviceSuperFrameResource m_deviceResource;
 	vuk::Allocator m_multiFrameAllocator;
 	gfx::Camera m_prevCamera;
+	Imgui m_imgui;
 
 };
 

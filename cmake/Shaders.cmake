@@ -7,6 +7,7 @@ set(SHADER_SOURCES
 	secondaryRays.comp
 	primaryRay.comp
 	tonemap.comp
+	imgui.vert imgui.frag
 )
 
 foreach(SHADER_PATH ${SHADER_SOURCES})

@@ -32,6 +32,7 @@ add_executable(MinoteRT
 	src/gfx/modules/tonemap.hpp src/gfx/modules/tonemap.cpp
 	src/gfx/renderer.hpp src/gfx/renderer.cpp
 	src/gfx/camera.hpp src/gfx/camera.cpp
+	src/gfx/imgui.hpp src/gfx/imgui.cpp
 	src/sys/vulkan.hpp src/sys/vulkan.cpp
 	src/sys/glfw.hpp src/sys/glfw.cpp
 	src/util/service.hpp
@@ -55,6 +56,7 @@ target_link_libraries(MinoteRT PRIVATE winmm)
 target_link_libraries(MinoteRT PRIVATE vk-bootstrap)
 target_link_libraries(MinoteRT PRIVATE fmtlog)
 target_link_libraries(MinoteRT PRIVATE assert)
+target_link_libraries(MinoteRT PRIVATE imgui)
 target_link_libraries(MinoteRT PRIVATE volk)
 target_link_libraries(MinoteRT PRIVATE glfw)
 target_link_libraries(MinoteRT PRIVATE vuk)

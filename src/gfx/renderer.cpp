@@ -5,10 +5,10 @@
 #include <vuk/CommandBuffer.hpp>
 #include <vuk/RenderGraph.hpp>
 #include <vuk/Context.hpp>
+#include <imgui.h>
 
 #include "math.hpp"
 #include "sys/vulkan.hpp"
-#include "gfx/samplers.hpp"
 #include "gfx/modules/pathtrace.hpp"
 #include "gfx/modules/tonemap.hpp"
 
@@ -18,7 +18,8 @@ using namespace math_literals;
 
 Renderer::Renderer():
 	m_deviceResource(sys::s_vulkan->context, InflightFrames),
-	m_multiFrameAllocator(m_deviceResource) {}
+	m_multiFrameAllocator(m_deviceResource),
+	m_imgui(m_multiFrameAllocator) {}
 
 void Renderer::draw(gfx::Camera const& _camera) {
 
@@ -30,6 +31,9 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		sys::s_vulkan->swapchain->extent.width,
 		sys::s_vulkan->swapchain->extent.height
 	};
+	m_imgui.begin(outputSize);
+
+	ImGui::ShowDemoWindow();
 
 	// Initial temporal resource values
 	if (sys::s_vulkan->context.get_frame_count() == 1)
@@ -39,19 +43,20 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	auto gbuffer = modules::primaryRays(outputSize, _camera, m_prevCamera);
 	auto pathtraced = modules::secondaryRays(std::move(gbuffer), _camera);
 	auto tonemapped = modules::tonemap(std::move(pathtraced));
+	auto imgui = m_imgui.render(frameAllocator, std::move(tonemapped));
 
 	// Blit to swapchain
 	auto rg = std::make_shared<vuk::RenderGraph>("main");
-	rg->attach_in("tonemapped", tonemapped);
+	rg->attach_in("imgui", std::move(imgui));
 	rg->attach_swapchain("swapchain/blank", sys::s_vulkan->swapchain);
 	rg->add_pass(vuk::Pass{
 		.name = "swapchain blit",
 		.resources = {
-			"tonemapped"_image >> vuk::eTransferRead,
+			"imgui"_image >> vuk::eTransferRead,
 			"swapchain/blank"_image >> vuk::eTransferWrite >> "swapchain",
 		},
 		.execute = [outputSize](vuk::CommandBuffer& cmd) {
-			cmd.blit_image("tonemapped", "swapchain/blank", vuk::ImageBlit{
+			cmd.blit_image("imgui", "swapchain/blank", vuk::ImageBlit{
 				.srcSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
 				.srcOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(outputSize.x()), int(outputSize.y()), 1}},
 				.dstSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },

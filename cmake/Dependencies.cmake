@@ -60,3 +60,19 @@ FetchContent_Declare(vk-bootstrap
 	GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap
 	GIT_TAG 61f77612c70dd49a59157fe139a7d248a90e206a)
 FetchContent_MakeAvailable(vk-bootstrap)
+
+FetchContent_Declare(imgui
+	GIT_REPOSITORY https://github.com/ocornut/imgui
+	GIT_TAG v1.89.4)
+FetchContent_MakeAvailable(imgui)
+add_library(imgui
+	${imgui_SOURCE_DIR}/imgui.h ${imgui_SOURCE_DIR}/imgui.cpp
+	${imgui_SOURCE_DIR}/imconfig.h ${imgui_SOURCE_DIR}/imgui_internal.h
+	${imgui_SOURCE_DIR}/imgui_draw.cpp ${imgui_SOURCE_DIR}/imgui_tables.cpp
+	${imgui_SOURCE_DIR}/imgui_widgets.cpp ${imgui_SOURCE_DIR}/imgui_demo.cpp
+	${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.h ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp)
+target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
+target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_OBSOLETE_KEYIO)
+target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_WIN32_FUNCTIONS)
+target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR})
+target_link_libraries(imgui PRIVATE glfw)
