@@ -31,35 +31,35 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 
 	auto rg = std::make_shared<vuk::RenderGraph>("primary_rays");
 	rg->attach_image("visibility/blank", vuk::ImageAttachment{
-		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y()),
+		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y(), 1u),
 		.format = vuk::Format::eR32Uint,
 		.sample_count = vuk::Samples::e1,
 		.level_count = 1,
 		.layer_count = 1,
 	});
 	rg->attach_image("depth/blank", vuk::ImageAttachment{
-		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y()),
+		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y(), 1u),
 		.format = vuk::Format::eR16Sfloat,
 		.sample_count = vuk::Samples::e1,
 		.level_count = 1,
 		.layer_count = 1,
 	});
 	rg->attach_image("normal/blank", vuk::ImageAttachment{
-		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y()),
+		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y(), 1u),
 		.format = vuk::Format::eR16G16B16A16Sfloat, // w unused
 		.sample_count = vuk::Samples::e1,
 		.level_count = 1,
 		.layer_count = 1,
 	});
 	rg->attach_image("seed/blank", vuk::ImageAttachment{
-		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y()),
+		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y(), 1u),
 		.format = vuk::Format::eR32Uint,
 		.sample_count = vuk::Samples::e1,
 		.level_count = 1,
 		.layer_count = 1,
 	});
 	rg->attach_image("motion/blank", vuk::ImageAttachment{
-		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y()),
+		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y(), 1u),
 		.format = vuk::Format::eR16G16Sfloat,
 		.sample_count = vuk::Samples::e1,
 		.level_count = 1,
