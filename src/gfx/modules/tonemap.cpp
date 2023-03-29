@@ -27,7 +27,7 @@ auto tonemap(vuk::Future _input) -> vuk::Future {
 		sys::s_vulkan->context.create_named_pipeline("tonemap", tonemapPci);
 	}
 
-	auto rg = std::make_shared<vuk::RenderGraph>();
+	auto rg = std::make_shared<vuk::RenderGraph>("tonemap");
 	rg->attach_in("input", std::move(_input));
 	rg->attach_image("output/blank", vuk::ImageAttachment{
 		.format = vuk::Format::eR8G8B8A8Unorm,

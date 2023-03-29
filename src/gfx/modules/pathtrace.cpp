@@ -29,7 +29,7 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 		sys::s_vulkan->context.create_named_pipeline("primary_ray", primaryRayPci);
 	}
 
-	auto rg = std::make_shared<vuk::RenderGraph>();
+	auto rg = std::make_shared<vuk::RenderGraph>("primary_rays");
 	rg->attach_image("visibility/blank", vuk::ImageAttachment{
 		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y()),
 		.format = vuk::Format::eR32Uint,
@@ -125,7 +125,7 @@ auto secondaryRays(GBuffer&& _gbuffer, Camera const& _camera) -> vuk::Future {
 		sys::s_vulkan->context.create_named_pipeline("secondary_rays", secondaryRaysPci);
 	}
 
-	auto rg = std::make_shared<vuk::RenderGraph>();
+	auto rg = std::make_shared<vuk::RenderGraph>("secondary_rays");
 	rg->attach_in("visibility", std::move(_gbuffer.visibility));
 	rg->attach_in("depth", std::move(_gbuffer.depth));
 	rg->attach_in("normal", std::move(_gbuffer.normal));
