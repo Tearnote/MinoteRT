@@ -17,6 +17,7 @@ target_compile_definitions(volk PUBLIC VK_USE_PLATFORM_WIN32_KHR)
 
 set(VUK_LINK_TO_LOADER OFF CACHE BOOL "" FORCE)
 set(VUK_USE_SHADERC OFF CACHE BOOL "" FORCE)
+set(VUK_FAIL_FAST ON CACHE BOOL "" FORCE)
 FetchContent_Declare(vuk
 	GIT_REPOSITORY https://github.com/martty/vuk
 	GIT_TAG a94873fd50a2f234dd084919c3ceb2d50a415c4b)
