@@ -27,6 +27,8 @@
 
 namespace minote::sys {
 
+using namespace stx::time_literals;
+
 void Glfw::setThreadName(std::string_view _name) {
 
 #ifdef THREAD_DEBUG
@@ -184,6 +186,12 @@ void Glfw::registerCursorMotionCallback(std::function<void(vec2)> _func) {
 void Glfw::registerMouseButtonCallback(std::function<void(int, bool)> _func) {
 
 	m_mouseButtonCallbacks.emplace_back(std::move(_func));
+
+}
+
+auto Glfw::getTime() -> stx::nsec {
+
+	return stx::seconds(glfwGetTime());
 
 }
 

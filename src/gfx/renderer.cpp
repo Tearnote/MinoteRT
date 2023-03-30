@@ -8,6 +8,7 @@
 #include <imgui.h>
 
 #include "math.hpp"
+#include "sys/glfw.hpp"
 #include "sys/vulkan.hpp"
 #include "gfx/modules/pathtrace.hpp"
 #include "gfx/modules/tonemap.hpp"
@@ -33,7 +34,19 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	};
 	m_imgui.begin(outputSize);
 
-	ImGui::ShowDemoWindow();
+	// Calculate framerate
+	m_framesSinceLastCheck += 1;
+	auto currentTime = sys::s_glfw->getTime();
+	auto timeElapsed = currentTime - m_lastFrameTimeCheck;
+	if (timeElapsed >= FrameTimeUpdate) {
+		auto secondsElapsed = stx::ratio(timeElapsed, 1_s);
+		m_frameTime = secondsElapsed / float(m_framesSinceLastCheck);
+
+		m_lastFrameTimeCheck = currentTime;
+		m_framesSinceLastCheck = 0;
+	}
+
+	ImGui::Text("Frametime: %.1f ms", m_frameTime * 1000.0f);
 
 	// Initial temporal resource values
 	if (sys::s_vulkan->context.get_frame_count() == 1)

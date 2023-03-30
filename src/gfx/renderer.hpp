@@ -3,16 +3,21 @@
 #include <vuk/Allocator.hpp>
 #include <vuk/resources/DeviceFrameResource.hpp>
 
+#include "types.hpp"
+#include "stx/time.hpp"
 #include "gfx/camera.hpp"
 #include "gfx/imgui.hpp"
 
 namespace minote::gfx {
+
+using namespace stx::time_literals;
 
 class Renderer {
 
 public:
 
 	constexpr static auto InflightFrames = 3u;
+	static constexpr auto FrameTimeUpdate = 1_s;
 
 	Renderer();
 
@@ -24,6 +29,10 @@ private:
 	vuk::Allocator m_multiFrameAllocator;
 	gfx::Camera m_prevCamera;
 	Imgui m_imgui;
+
+	float m_frameTime;
+	stx::nsec m_lastFrameTimeCheck;
+	uint m_framesSinceLastCheck;
 
 };
 

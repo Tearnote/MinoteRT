@@ -34,6 +34,9 @@ public:
 
 	auto windowSize() -> uvec2;
 
+	[[nodiscard]]
+	auto getTime() -> stx::nsec;
+
 	auto getCursorPosition() -> vec2;
 
 	void registerKeyCallback(std::function<void(int, bool)>);
