@@ -30,12 +30,13 @@ auto tonemap(vuk::Future _input) -> vuk::Future {
 	auto rg = std::make_shared<vuk::RenderGraph>("tonemap");
 	rg->attach_in("input", std::move(_input));
 	rg->attach_image("output/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(sys::s_vulkan->swapchain->extent), //TODO pending vuk bugfix
 		.format = vuk::Format::eR8G8B8A8Unorm,
 		.sample_count = vuk::Samples::e1,
 		.level_count = 1,
 		.layer_count = 1,
 	});
-	rg->inference_rule("output/blank", vuk::same_extent_as("input"));
+//	rg->inference_rule("output/blank", vuk::same_extent_as("input")); //TODO pending vuk bugfix
 
 	rg->add_pass(vuk::Pass{
 		.name = "tonemapping",
