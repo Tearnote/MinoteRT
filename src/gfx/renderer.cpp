@@ -33,19 +33,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		sys::s_vulkan->swapchain->extent.height
 	};
 	m_imgui.begin(outputSize);
-
-	// Calculate framerate
-	m_framesSinceLastCheck += 1;
-	auto currentTime = sys::s_glfw->getTime();
-	auto timeElapsed = currentTime - m_lastFrameTimeCheck;
-	if (timeElapsed >= FrameTimeUpdate) {
-		auto secondsElapsed = stx::ratio(timeElapsed, 1_s);
-		m_frameTime = secondsElapsed / float(m_framesSinceLastCheck);
-
-		m_lastFrameTimeCheck = currentTime;
-		m_framesSinceLastCheck = 0;
-	}
-	ImGui::Text("Frametime: %.1f ms", m_frameTime * 1000.0f);
+	updateFrameTime();
 
 	// Initial temporal resource values
 	if (sys::s_vulkan->context.get_frame_count() == 1)
@@ -89,6 +77,22 @@ void Renderer::draw(gfx::Camera const& _camera) {
 
 }
 
+void Renderer::updateFrameTime() {
+
+	m_framesSinceLastCheck += 1;
+	auto currentTime = sys::s_glfw->getTime();
+	auto timeElapsed = currentTime - m_lastFrameTimeCheck;
+	if (timeElapsed >= FrameTimeUpdate) {
+		auto secondsElapsed = stx::ratio(timeElapsed, 1_s);
+		m_frameTime = secondsElapsed / float(m_framesSinceLastCheck);
+
+		m_lastFrameTimeCheck = currentTime;
+		m_framesSinceLastCheck = 0;
+	}
+	ImGui::Text("Frame time: %.2f ms", m_frameTime * 1000.0f);
+
+}
+
 auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 
 	// Tonemapper selection
@@ -106,23 +110,16 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 	static auto tonemapMode = TonemapMode::Uchimura;
 	static auto uchimuraParams = modules::UchimuraParams::make_default();
 	if (ImGui::CollapsingHeader("Tonemapper")) {
-		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 10.0f, "%.1f",
-		                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&tonemapMode),
 		             TonemapModeStrings.data(), TonemapModeStrings.size());
 		if (tonemapMode == TonemapMode::Uchimura) {
-			ImGui::SliderFloat("Max brightness", &uchimuraParams.maxBrightness, 1.0f, 10.0f, "%.2f",
-			                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
-			ImGui::SliderFloat("Contrast", &uchimuraParams.contrast, 0.1f, 2.4f, "%.2f",
-			                   ImGuiSliderFlags_NoRoundToFormat);;
-			ImGui::SliderFloat("Linear start", &uchimuraParams.linearStart, 0.01f, 0.9f, "%.2f",
-			                   ImGuiSliderFlags_NoRoundToFormat);
-			ImGui::SliderFloat("Linear length", &uchimuraParams.linearLength, 0.0f, 0.9f, "%.2f",
-			                   ImGuiSliderFlags_NoRoundToFormat);
-			ImGui::SliderFloat("Black tightness", &uchimuraParams.blackTightness, 1.0f, 3.0f, "%.2f",
-			                   ImGuiSliderFlags_NoRoundToFormat);
-			ImGui::SliderFloat("Pedestal", &uchimuraParams.pedestal, 0.0f, 1.0f, "%.2f",
-			                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+			ImGui::SliderFloat("Max brightness", &uchimuraParams.maxBrightness, 1.0f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+			ImGui::SliderFloat("Contrast", &uchimuraParams.contrast, 0.1f, 2.4f, "%.2f");
+			ImGui::SliderFloat("Linear start", &uchimuraParams.linearStart, 0.01f, 0.9f, "%.2f");
+			ImGui::SliderFloat("Linear length", &uchimuraParams.linearLength, 0.0f, 0.9f, "%.2f");
+			ImGui::SliderFloat("Black tightness", &uchimuraParams.blackTightness, 1.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Pedestal", &uchimuraParams.pedestal, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 		}
 	}
 
