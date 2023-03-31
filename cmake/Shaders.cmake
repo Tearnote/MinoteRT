@@ -6,6 +6,7 @@ set(SHADER_DIR_PREFIX src/gpu/)
 set(SHADER_SOURCES
 	tonemap/uchimura.comp
 	tonemap/linear.comp
+	tonemap/aces.comp
 	secondaryRays.comp
 	primaryRay.comp
 	imgui.vert imgui.frag

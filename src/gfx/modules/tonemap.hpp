@@ -10,6 +10,8 @@ namespace minote::gfx::modules {
 
 auto tonemapLinear(vuk::Future input, float exposure) -> vuk::Future;
 
+auto tonemapAces(vuk::Future input, float exposure) -> vuk::Future;
+
 struct UchimuraParams {
 	float maxBrightness;
 	float contrast;
