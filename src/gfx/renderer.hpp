@@ -34,6 +34,8 @@ private:
 	stx::nsec m_lastFrameTimeCheck;
 	uint m_framesSinceLastCheck;
 
+	auto tonemap(vuk::Future) -> vuk::Future;
+
 };
 
 }

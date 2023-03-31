@@ -54,47 +54,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	// Create a rendergraph
 	auto gbuffer = modules::primaryRays(outputSize, _camera, m_prevCamera);
 	auto pathtraced = modules::secondaryRays(std::move(gbuffer), _camera);
-
-	enum class TonemapMode: int {
-		Linear = 0,
-		Uchimura = 1,
-	};
-	constexpr static auto TonemapModeStrings = std::to_array<const char*>({
-	    "Linear",
-		"Uchimura",
-	});
-	static auto exposure = 1.0f;
-	static auto tonemapMode = TonemapMode::Uchimura;
-	static auto uchimuraParams = modules::UchimuraParams::make_default();
-	if (ImGui::CollapsingHeader("Tonemapper")) {
-		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 10.0f, "%.1f",
-						   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
-		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&tonemapMode),
-		             TonemapModeStrings.data(), TonemapModeStrings.size());
-		if (tonemapMode == TonemapMode::Uchimura) {
-			ImGui::SliderFloat("Max brightness", &uchimuraParams.maxBrightness, 1.0f, 10.0f, "%.1f",
-			                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
-			ImGui::SliderFloat("Contrast", &uchimuraParams.contrast, 0.1f, 2.4f, "%.1f",
-			                   ImGuiSliderFlags_NoRoundToFormat);;
-			ImGui::SliderFloat("Linear start", &uchimuraParams.linearStart, 0.01f, 0.9f, "%.1f",
-			                   ImGuiSliderFlags_NoRoundToFormat);
-			ImGui::SliderFloat("Linear length", &uchimuraParams.linearLength, 0.0f, 0.9f, "%.1f",
-			                   ImGuiSliderFlags_NoRoundToFormat);
-			ImGui::SliderFloat("Black tightness", &uchimuraParams.blackTightness, 1.0f, 3.0f, "%.1f",
-			                   ImGuiSliderFlags_NoRoundToFormat);
-			ImGui::SliderFloat("Pedestal", &uchimuraParams.pedestal, 0.0f, 1.0f, "%.1f",
-			                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
-		}
-	}
-	auto tonemapped = [&]() {
-		switch (tonemapMode) {
-			case TonemapMode::Linear:
-				return modules::tonemapLinear(std::move(pathtraced), exposure);
-			case TonemapMode::Uchimura:
-				return modules::tonemapUchimura(std::move(pathtraced), exposure, uchimuraParams);
-		}
-	}();
-
+	auto tonemapped = tonemap(std::move(pathtraced));
 	auto imgui = m_imgui.render(frameAllocator, std::move(tonemapped));
 
 	// Blit to swapchain
@@ -126,6 +86,53 @@ void Renderer::draw(gfx::Camera const& _camera) {
 
 	// Temporal preservation
 	m_prevCamera = _camera;
+
+}
+
+auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
+
+	// Tonemapper selection
+	enum class TonemapMode: int {
+		Linear = 0,
+		Uchimura = 1,
+	};
+	constexpr static auto TonemapModeStrings = std::to_array<const char*>({
+    	"Linear",
+		"Uchimura",
+    });
+
+	// Expose all controls via Imgui
+	static auto exposure = 1.0f;
+	static auto tonemapMode = TonemapMode::Uchimura;
+	static auto uchimuraParams = modules::UchimuraParams::make_default();
+	if (ImGui::CollapsingHeader("Tonemapper")) {
+		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 10.0f, "%.1f",
+		                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&tonemapMode),
+		             TonemapModeStrings.data(), TonemapModeStrings.size());
+		if (tonemapMode == TonemapMode::Uchimura) {
+			ImGui::SliderFloat("Max brightness", &uchimuraParams.maxBrightness, 1.0f, 10.0f, "%.2f",
+			                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+			ImGui::SliderFloat("Contrast", &uchimuraParams.contrast, 0.1f, 2.4f, "%.2f",
+			                   ImGuiSliderFlags_NoRoundToFormat);;
+			ImGui::SliderFloat("Linear start", &uchimuraParams.linearStart, 0.01f, 0.9f, "%.2f",
+			                   ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::SliderFloat("Linear length", &uchimuraParams.linearLength, 0.0f, 0.9f, "%.2f",
+			                   ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::SliderFloat("Black tightness", &uchimuraParams.blackTightness, 1.0f, 3.0f, "%.2f",
+			                   ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::SliderFloat("Pedestal", &uchimuraParams.pedestal, 0.0f, 1.0f, "%.2f",
+			                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+		}
+	}
+
+	// Perform tonemapping via chosen method
+	switch (tonemapMode) {
+		case TonemapMode::Linear:
+			return modules::tonemapLinear(std::move(_input), exposure);
+		case TonemapMode::Uchimura:
+			return modules::tonemapUchimura(std::move(_input), exposure, uchimuraParams);
+	}
 
 }
 
