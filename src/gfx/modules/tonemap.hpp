@@ -36,4 +36,24 @@ struct UchimuraParams {
 
 auto tonemapUchimura(vuk::Future input, float exposure, UchimuraParams const&) -> vuk::Future;
 
+struct AMDParams {
+	float hdrMax;
+	float contrast;
+	float shoulder;
+	float midIn;
+	float midOut;
+
+	static auto make_default() -> AMDParams {
+		return AMDParams{
+			.hdrMax = 16.0f,
+			.contrast = 2.0f,
+			.shoulder = 1.0f,
+			.midIn = 0.18f,
+			.midOut = 0.18f,
+		};
+	}
+};
+
+auto tonemapAMD(vuk::Future input, float exposure, AMDParams const&) -> vuk::Future;
+
 }

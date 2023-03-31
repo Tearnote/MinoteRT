@@ -78,18 +78,21 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 		Hable = 1,
 		ACES = 2,
 		Uchimura = 3,
+		AMD = 4,
 	};
 	constexpr static auto TonemapModeStrings = std::to_array<const char*>({
     	"Linear",
     	"Hable",
     	"ACES",
 		"Uchimura",
+		"AMD",
     });
 
 	// Expose all controls via Imgui
 	static auto exposure = 1.0f;
-	static auto tonemapMode = TonemapMode::Uchimura;
+	static auto tonemapMode = TonemapMode::AMD;
 	static auto uchimuraParams = modules::UchimuraParams::make_default();
+	static auto amdParams = modules::AMDParams::make_default();
 	if (ImGui::CollapsingHeader("Tonemapper")) {
 		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&tonemapMode),
@@ -101,6 +104,13 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 			ImGui::SliderFloat("Linear length", &uchimuraParams.linearLength, 0.0f, 0.9f, "%.2f");
 			ImGui::SliderFloat("Black tightness", &uchimuraParams.blackTightness, 1.0f, 3.0f, "%.2f");
 			ImGui::SliderFloat("Pedestal", &uchimuraParams.pedestal, 0.0f, 1.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+		}
+		if (tonemapMode == TonemapMode::AMD) {
+			ImGui::SliderFloat("HDR peak", &amdParams.hdrMax, 1.0f, 32.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+			ImGui::SliderFloat("Contrast", &amdParams.contrast, 0.5f, 4.0f, "%.2f");
+			ImGui::SliderFloat("Shoulder", &amdParams.shoulder, 0.9f, 1.0f, "%.2f");
+			ImGui::SliderFloat("Mid in", &amdParams.midIn, 0.01f, 1.0f, "%.2f");
+			ImGui::SliderFloat("Mid out", &amdParams.midOut, 0.01f, 0.99f, "%.2f");
 		}
 	}
 
@@ -114,6 +124,8 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 			return modules::tonemapAces(std::move(_input), exposure);
 		case TonemapMode::Uchimura:
 			return modules::tonemapUchimura(std::move(_input), exposure, uchimuraParams);
+		case TonemapMode::AMD:
+			return modules::tonemapAMD(std::move(_input), exposure, amdParams);
 		default:
 			throw stx::logic_error_fmt("Unknown tonemap mode {}", +tonemapMode);
 	}

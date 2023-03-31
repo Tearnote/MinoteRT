@@ -8,6 +8,7 @@ set(SHADER_SOURCES
 	tonemap/linear.comp
 	tonemap/hable.comp
 	tonemap/aces.comp
+	tonemap/amd.comp
 	secondaryRays.comp
 	primaryRay.comp
 	imgui.vert imgui.frag
