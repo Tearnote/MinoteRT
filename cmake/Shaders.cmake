@@ -4,9 +4,10 @@ include(cmake/Dependencies.cmake)
 
 set(SHADER_DIR_PREFIX src/gpu/)
 set(SHADER_SOURCES
+	tonemap/uchimura.comp
+	tonemap/linear.comp
 	secondaryRays.comp
 	primaryRay.comp
-	tonemap.comp
 	imgui.vert imgui.frag
 )
 

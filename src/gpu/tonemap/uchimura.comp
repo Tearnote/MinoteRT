@@ -1,24 +1,15 @@
 #version 460
 #pragma shader_stage(compute)
-#extension GL_EXT_shader_image_load_formatted: enable
+
+#include "../util.glsl"
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
 layout(binding = 0) uniform sampler2D s_src;
-layout(binding = 1) restrict uniform image2D i_dst;
+layout(binding = 1) restrict writeonly uniform image2D i_dst;
 layout(push_constant) uniform Constants {
-    uint uchimura;
     float exposure;
 } C;
-
-// Conversion from linear RGB to sRGB
-// http://www.java-gaming.org/topics/fast-srgb-conversion-glsl-snippet/37583/view.html
-vec3 srgbEncode(vec3 _color) {
-    float r = _color.r < 0.0031308 ? 12.92 * _color.r : 1.055 * pow(_color.r, 1.0/2.4) - 0.055;
-    float g = _color.g < 0.0031308 ? 12.92 * _color.g : 1.055 * pow(_color.g, 1.0/2.4) - 0.055;
-    float b = _color.b < 0.0031308 ? 12.92 * _color.b : 1.055 * pow(_color.b, 1.0/2.4) - 0.055;
-    return vec3(r, g, b);
-}
 
 vec3 uchimura(vec3 x, float P, float a, float m, float l, float c, float b) {
     float l0 = ((P - m) * l) / a;
@@ -58,10 +49,6 @@ void main() {
 
     vec3 source = texelFetch(s_src, ivec2(Gid), 0).xyz;
     source *= C.exposure;
-    vec3 mapped;
-    if (C.uchimura == 1u)
-        mapped = uchimura(source);
-    else
-        mapped = source;
+    vec3 mapped = uchimura(source);
     imageStore(i_dst, ivec2(Gid), vec4(srgbEncode(mapped), 1.0));
 }

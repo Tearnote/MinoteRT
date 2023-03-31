@@ -13,21 +13,21 @@
 
 namespace minote::gfx::modules {
 
-auto tonemap(vuk::Future _input, TonemapMode _mode, float _exposure) -> vuk::Future {
+auto tonemapLinear(vuk::Future _input, float _exposure) -> vuk::Future {
 
 	static auto compiled = false;
 	if (!compiled) {
 		compiled = true;
 
-		auto tonemapPci = vuk::PipelineBaseCreateInfo();
-		constexpr auto tonemapSource = std::to_array<uint>({
-#include "spv/tonemap.comp.spv"
-		});
-		tonemapPci.add_static_spirv(tonemapSource.data(), tonemapSource.size(), "tonemap.comp");
-		sys::s_vulkan->context.create_named_pipeline("tonemap", tonemapPci);
+		auto tonemapLinearPci = vuk::PipelineBaseCreateInfo();
+		constexpr auto tonemapLinearSource = std::to_array<uint>({
+#include "spv/tonemap/linear.comp.spv"
+		                                                   });
+		tonemapLinearPci.add_static_spirv(tonemapLinearSource.data(), tonemapLinearSource.size(), "tonemap/linear.comp");
+		sys::s_vulkan->context.create_named_pipeline("tonemap/linear", tonemapLinearPci);
 	}
 
-	auto rg = std::make_shared<vuk::RenderGraph>("tonemap");
+	auto rg = std::make_shared<vuk::RenderGraph>("tonemap/linear");
 	rg->attach_in("input", std::move(_input));
 	rg->attach_image("output/blank", vuk::ImageAttachment{
 		.extent = vuk::Dimension3D::absolute(sys::s_vulkan->swapchain->extent), //TODO pending vuk bugfix
@@ -39,22 +39,72 @@ auto tonemap(vuk::Future _input, TonemapMode _mode, float _exposure) -> vuk::Fut
 //	rg->inference_rule("output/blank", vuk::same_extent_as("input")); //TODO pending vuk bugfix
 
 	rg->add_pass(vuk::Pass{
-		.name = "tonemapping",
+		.name = "tonemap/linear",
 		.resources = {
 			"input"_image >> vuk::eComputeSampled,
 			"output/blank"_image >> vuk::eComputeWrite >> "output",
 		},
-		.execute = [_mode, _exposure](vuk::CommandBuffer& cmd) {
-			cmd.bind_compute_pipeline("tonemap")
+		.execute = [_exposure](vuk::CommandBuffer& cmd) {
+			cmd.bind_compute_pipeline("tonemap/linear")
 				.bind_image(0, 0, "input").bind_sampler(0, 0, NearestClamp)
 				.bind_image(0, 1, "output/blank");
 
 			struct Constants {
-				uint uchimura;
 				float exposure;
 			};
 			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
-				.uchimura = _mode == TonemapMode::Uchimura? 1u : 0u,
+				.exposure = _exposure,
+			});
+
+			auto size = cmd.get_resource_image_attachment("output/blank")->extent.extent;
+			cmd.dispatch_invocations(size.width, size.height);
+		},
+	});
+
+	return vuk::Future(std::move(rg), "output");
+
+}
+
+auto tonemapUchimura(vuk::Future _input, float _exposure) -> vuk::Future {
+
+	static auto compiled = false;
+	if (!compiled) {
+		compiled = true;
+
+		auto tonemapUchimuraPci = vuk::PipelineBaseCreateInfo();
+		constexpr auto tonemapUchimuraSource = std::to_array<uint>({
+#include "spv/tonemap/uchimura.comp.spv"
+		});
+		tonemapUchimuraPci.add_static_spirv(tonemapUchimuraSource.data(), tonemapUchimuraSource.size(), "tonemap/uchimura.comp");
+		sys::s_vulkan->context.create_named_pipeline("tonemap/uchimura", tonemapUchimuraPci);
+	}
+
+	auto rg = std::make_shared<vuk::RenderGraph>("tonemap/uchimura");
+	rg->attach_in("input", std::move(_input));
+	rg->attach_image("output/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(sys::s_vulkan->swapchain->extent), //TODO pending vuk bugfix
+		.format = vuk::Format::eR8G8B8A8Unorm,
+		.sample_count = vuk::Samples::e1,
+		.level_count = 1,
+		.layer_count = 1,
+	});
+//	rg->inference_rule("output/blank", vuk::same_extent_as("input")); //TODO pending vuk bugfix
+
+	rg->add_pass(vuk::Pass{
+		.name = "tonemap/uchimura",
+		.resources = {
+			"input"_image >> vuk::eComputeSampled,
+			"output/blank"_image >> vuk::eComputeWrite >> "output",
+		},
+		.execute = [_exposure](vuk::CommandBuffer& cmd) {
+			cmd.bind_compute_pipeline("tonemap/uchimura")
+				.bind_image(0, 0, "input").bind_sampler(0, 0, NearestClamp)
+				.bind_image(0, 1, "output/blank");
+
+			struct Constants {
+				float exposure;
+			};
+			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
 				.exposure = _exposure,
 			});
 

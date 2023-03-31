@@ -8,16 +8,8 @@
 
 namespace minote::gfx::modules {
 
-enum class TonemapMode: int {
-	Linear = 0,
-	Uchimura = 1,
-};
+auto tonemapLinear(vuk::Future input, float exposure) -> vuk::Future;
 
-inline constexpr static auto TonemapModeStrings = std::to_array<const char*>({
-	"Linear",
-	"Uchimura",
-});
-
-auto tonemap(vuk::Future input, TonemapMode, float exposure) -> vuk::Future;
+auto tonemapUchimura(vuk::Future input, float exposure) -> vuk::Future;
 
 }
