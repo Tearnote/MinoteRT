@@ -13,7 +13,7 @@ layout(push_constant) uniform Constants {
     float contrast;
     float linearStart;
     float linearLength;
-    float blackLevel;
+    float blackTightness;
     float pedestal;
 } C;
 
@@ -44,6 +44,6 @@ void main() {
 
     vec3 source = texelFetch(s_src, ivec2(Gid), 0).xyz;
     source *= C.exposure;
-    vec3 mapped = uchimura(source, C.maxBrightness, C.contrast, C.linearStart, C.linearLength, C.blackLevel, C.pedestal);
+    vec3 mapped = uchimura(source, C.maxBrightness, C.contrast, C.linearStart, C.linearLength, C.blackTightness, C.pedestal);
     imageStore(i_dst, ivec2(Gid), vec4(srgbEncode(mapped), 1.0));
 }

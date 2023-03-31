@@ -65,18 +65,33 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	});
 	static auto exposure = 1.0f;
 	static auto tonemapMode = TonemapMode::Uchimura;
+	static auto uchimuraParams = modules::UchimuraParams::make_default();
 	if (ImGui::CollapsingHeader("Tonemapper")) {
 		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 10.0f, "%.1f",
 						   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
 		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&tonemapMode),
 		             TonemapModeStrings.data(), TonemapModeStrings.size());
+		if (tonemapMode == TonemapMode::Uchimura) {
+			ImGui::SliderFloat("Max brightness", &uchimuraParams.maxBrightness, 1.0f, 10.0f, "%.1f",
+			                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+			ImGui::SliderFloat("Contrast", &uchimuraParams.contrast, 0.1f, 2.4f, "%.1f",
+			                   ImGuiSliderFlags_NoRoundToFormat);;
+			ImGui::SliderFloat("Linear start", &uchimuraParams.linearStart, 0.01f, 0.9f, "%.1f",
+			                   ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::SliderFloat("Linear length", &uchimuraParams.linearLength, 0.0f, 0.9f, "%.1f",
+			                   ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::SliderFloat("Black tightness", &uchimuraParams.blackTightness, 1.0f, 3.0f, "%.1f",
+			                   ImGuiSliderFlags_NoRoundToFormat);
+			ImGui::SliderFloat("Pedestal", &uchimuraParams.pedestal, 0.0f, 1.0f, "%.1f",
+			                   ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+		}
 	}
 	auto tonemapped = [&]() {
 		switch (tonemapMode) {
 			case TonemapMode::Linear:
 				return modules::tonemapLinear(std::move(pathtraced), exposure);
 			case TonemapMode::Uchimura:
-				return modules::tonemapUchimura(std::move(pathtraced), exposure, modules::UchimuraParams::make_default());
+				return modules::tonemapUchimura(std::move(pathtraced), exposure, uchimuraParams);
 		}
 	}();
 

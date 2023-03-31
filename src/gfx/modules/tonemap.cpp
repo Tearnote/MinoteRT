@@ -107,7 +107,7 @@ auto tonemapUchimura(vuk::Future _input, float _exposure, UchimuraParams const& 
 				float contrast;
 				float linearStart;
 				float linearLength;
-				float blackLevel;
+				float blackTightness;
 				float pedestal;
 			};
 			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
@@ -116,7 +116,7 @@ auto tonemapUchimura(vuk::Future _input, float _exposure, UchimuraParams const& 
 				.contrast = _params.contrast,
 				.linearStart = _params.linearStart,
 				.linearLength = _params.linearLength,
-				.blackLevel = _params.blackLevel,
+				.blackTightness = _params.blackTightness,
 				.pedestal = _params.pedestal,
 			});
 

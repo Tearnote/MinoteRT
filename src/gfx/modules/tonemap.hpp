@@ -15,16 +15,16 @@ struct UchimuraParams {
 	float contrast;
 	float linearStart;
 	float linearLength;
-	float blackLevel;
+	float blackTightness;
 	float pedestal;
 
 	static auto make_default() -> UchimuraParams {
 		return UchimuraParams{
 			.maxBrightness = 1.0f,
 			.contrast = 1.0f,
-			.linearStart = 0.16f,
-			.linearLength = 0.2f,
-			.blackLevel = 1.2f,
+			.linearStart = 0.22f,
+			.linearLength = 0.4f,
+			.blackTightness = 1.33f,
 			.pedestal = 0.0f,
 		};
 	}
