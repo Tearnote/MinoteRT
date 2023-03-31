@@ -18,6 +18,6 @@ inline constexpr static auto TonemapModeStrings = std::to_array<const char*>({
 	"Uchimura",
 });
 
-auto tonemap(vuk::Future input, TonemapMode) -> vuk::Future;
+auto tonemap(vuk::Future input, TonemapMode, float exposure) -> vuk::Future;
 
 }

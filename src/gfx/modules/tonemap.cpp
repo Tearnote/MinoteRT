@@ -13,7 +13,7 @@
 
 namespace minote::gfx::modules {
 
-auto tonemap(vuk::Future _input, TonemapMode _mode) -> vuk::Future {
+auto tonemap(vuk::Future _input, TonemapMode _mode, float _exposure) -> vuk::Future {
 
 	static auto compiled = false;
 	if (!compiled) {
@@ -44,12 +44,19 @@ auto tonemap(vuk::Future _input, TonemapMode _mode) -> vuk::Future {
 			"input"_image >> vuk::eComputeSampled,
 			"output/blank"_image >> vuk::eComputeWrite >> "output",
 		},
-		.execute = [_mode](vuk::CommandBuffer& cmd) {
+		.execute = [_mode, _exposure](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("tonemap")
 				.bind_image(0, 0, "input").bind_sampler(0, 0, NearestClamp)
 				.bind_image(0, 1, "output/blank");
 
-			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, _mode == TonemapMode::Uchimura? 1u : 0u);
+			struct Constants {
+				uint uchimura;
+				float exposure;
+			};
+			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
+				.uchimura = _mode == TonemapMode::Uchimura? 1u : 0u,
+				.exposure = _exposure,
+			});
 
 			auto size = cmd.get_resource_image_attachment("output/blank")->extent.extent;
 			cmd.dispatch_invocations(size.width, size.height);

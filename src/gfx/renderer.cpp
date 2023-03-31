@@ -55,9 +55,13 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	auto gbuffer = modules::primaryRays(outputSize, _camera, m_prevCamera);
 	auto pathtraced = modules::secondaryRays(std::move(gbuffer), _camera);
 	static auto tonemapMode = modules::TonemapMode::Uchimura;
-	ImGui::Combo("Tonemapper", reinterpret_cast<int*>(&tonemapMode),
-		modules::TonemapModeStrings.data(), modules::TonemapModeStrings.size());
-	auto tonemapped = modules::tonemap(std::move(pathtraced), tonemapMode);
+	static auto exposure = 1.0f;
+	if (ImGui::CollapsingHeader("Tonemapper")) {
+		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 10.0f, "%.1f", ImGuiSliderFlags_NoRoundToFormat | ImGuiSliderFlags_Logarithmic);
+		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&tonemapMode),
+		             modules::TonemapModeStrings.data(), modules::TonemapModeStrings.size());
+	}
+	auto tonemapped = modules::tonemap(std::move(pathtraced), tonemapMode, exposure);
 	auto imgui = m_imgui.render(frameAllocator, std::move(tonemapped));
 
 	// Blit to swapchain

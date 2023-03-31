@@ -8,6 +8,7 @@ layout(binding = 0) uniform sampler2D s_src;
 layout(binding = 1) restrict uniform image2D i_dst;
 layout(push_constant) uniform Constants {
     uint uchimura;
+    float exposure;
 } C;
 
 // Conversion from linear RGB to sRGB
@@ -55,11 +56,12 @@ void main() {
     const uvec2 DstSize = uvec2(imageSize(i_dst));
     if (any(greaterThanEqual(Gid, DstSize))) return;
 
-    vec4 sourceTex = texelFetch(s_src, ivec2(Gid), 0);
+    vec3 source = texelFetch(s_src, ivec2(Gid), 0).xyz;
+    source *= C.exposure;
     vec3 mapped;
     if (C.uchimura == 1u)
-        mapped = uchimura(vec3(sourceTex));
+        mapped = uchimura(source);
     else
-        mapped = vec3(sourceTex);
+        mapped = source;
     imageStore(i_dst, ivec2(Gid), vec4(srgbEncode(mapped), 1.0));
 }
