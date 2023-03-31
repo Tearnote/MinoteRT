@@ -65,7 +65,7 @@ auto tonemapLinear(vuk::Future _input, float _exposure) -> vuk::Future {
 
 }
 
-auto tonemapUchimura(vuk::Future _input, float _exposure) -> vuk::Future {
+auto tonemapUchimura(vuk::Future _input, float _exposure, UchimuraParams const& _params) -> vuk::Future {
 
 	static auto compiled = false;
 	if (!compiled) {
@@ -96,16 +96,28 @@ auto tonemapUchimura(vuk::Future _input, float _exposure) -> vuk::Future {
 			"input"_image >> vuk::eComputeSampled,
 			"output/blank"_image >> vuk::eComputeWrite >> "output",
 		},
-		.execute = [_exposure](vuk::CommandBuffer& cmd) {
+		.execute = [_exposure, _params](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("tonemap/uchimura")
 				.bind_image(0, 0, "input").bind_sampler(0, 0, NearestClamp)
 				.bind_image(0, 1, "output/blank");
 
 			struct Constants {
 				float exposure;
+				float maxBrightness;
+				float contrast;
+				float linearStart;
+				float linearLength;
+				float blackLevel;
+				float pedestal;
 			};
 			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
 				.exposure = _exposure,
+				.maxBrightness = _params.maxBrightness,
+				.contrast = _params.contrast,
+				.linearStart = _params.linearStart,
+				.linearLength = _params.linearLength,
+				.blackLevel = _params.blackLevel,
+				.pedestal = _params.pedestal,
 			});
 
 			auto size = cmd.get_resource_image_attachment("output/blank")->extent.extent;

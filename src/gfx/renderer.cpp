@@ -76,7 +76,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 			case TonemapMode::Linear:
 				return modules::tonemapLinear(std::move(pathtraced), exposure);
 			case TonemapMode::Uchimura:
-				return modules::tonemapUchimura(std::move(pathtraced), exposure);
+				return modules::tonemapUchimura(std::move(pathtraced), exposure, modules::UchimuraParams::make_default());
 		}
 	}();
 

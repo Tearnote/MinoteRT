@@ -9,6 +9,12 @@ layout(binding = 0) uniform sampler2D s_src;
 layout(binding = 1) restrict writeonly uniform image2D i_dst;
 layout(push_constant) uniform Constants {
     float exposure;
+    float maxBrightness;
+    float contrast;
+    float linearStart;
+    float linearLength;
+    float blackLevel;
+    float pedestal;
 } C;
 
 vec3 uchimura(vec3 x, float P, float a, float m, float l, float c, float b) {
@@ -31,17 +37,6 @@ vec3 uchimura(vec3 x, float P, float a, float m, float l, float c, float b) {
     return T * w0 + L * w1 + S * w2;
 }
 
-vec3 uchimura(vec3 x) {
-    const float P = 1.0; // max display brightness
-    const float a = 1.0; // contrast
-    const float m = 0.16; // linear section start
-    const float l = 0.2; // linear section length
-    const float c = 1.2; // black
-    const float b = 0.0; // pedestal
-
-    return uchimura(x, P, a, m, l, c, b);
-}
-
 void main() {
     const uvec2 Gid = gl_GlobalInvocationID.xy;
     const uvec2 DstSize = uvec2(imageSize(i_dst));
@@ -49,6 +44,6 @@ void main() {
 
     vec3 source = texelFetch(s_src, ivec2(Gid), 0).xyz;
     source *= C.exposure;
-    vec3 mapped = uchimura(source);
+    vec3 mapped = uchimura(source, C.maxBrightness, C.contrast, C.linearStart, C.linearLength, C.blackLevel, C.pedestal);
     imageStore(i_dst, ivec2(Gid), vec4(srgbEncode(mapped), 1.0));
 }
