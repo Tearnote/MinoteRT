@@ -6,6 +6,9 @@ layout(local_size_x = 8, local_size_y = 8) in;
 
 layout(binding = 0) uniform sampler2D s_src;
 layout(binding = 1) restrict uniform image2D i_dst;
+layout(push_constant) uniform Constants {
+    uint uchimura;
+} C;
 
 // Conversion from linear RGB to sRGB
 // http://www.java-gaming.org/topics/fast-srgb-conversion-glsl-snippet/37583/view.html
@@ -53,7 +56,10 @@ void main() {
     if (any(greaterThanEqual(Gid, DstSize))) return;
 
     vec4 sourceTex = texelFetch(s_src, ivec2(Gid), 0);
-    vec3 mapped = uchimura(vec3(sourceTex));
-//    vec3 mapped = vec3(sourceTex);
+    vec3 mapped;
+    if (C.uchimura == 1u)
+        mapped = uchimura(vec3(sourceTex));
+    else
+        mapped = vec3(sourceTex);
     imageStore(i_dst, ivec2(Gid), vec4(srgbEncode(mapped), 1.0));
 }

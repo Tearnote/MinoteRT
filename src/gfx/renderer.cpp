@@ -45,7 +45,6 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		m_lastFrameTimeCheck = currentTime;
 		m_framesSinceLastCheck = 0;
 	}
-
 	ImGui::Text("Frametime: %.1f ms", m_frameTime * 1000.0f);
 
 	// Initial temporal resource values
@@ -55,7 +54,10 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	// Create a rendergraph
 	auto gbuffer = modules::primaryRays(outputSize, _camera, m_prevCamera);
 	auto pathtraced = modules::secondaryRays(std::move(gbuffer), _camera);
-	auto tonemapped = modules::tonemap(std::move(pathtraced));
+	static auto tonemapMode = modules::TonemapMode::Uchimura;
+	ImGui::Combo("Tonemapper", reinterpret_cast<int*>(&tonemapMode),
+		modules::TonemapModeStrings.data(), modules::TonemapModeStrings.size());
+	auto tonemapped = modules::tonemap(std::move(pathtraced), tonemapMode);
 	auto imgui = m_imgui.render(frameAllocator, std::move(tonemapped));
 
 	// Blit to swapchain
