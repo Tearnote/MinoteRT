@@ -18,6 +18,7 @@ Freecam::Freecam() {
 
 void Freecam::registerEvents() {
 	sys::s_glfw->registerKeyCallback([this](int key, bool action) {
+		if (action && ImGui::GetIO().WantCaptureKeyboard) return;
 		switch (key) {
 			case GLFW_KEY_UP:
 			case GLFW_KEY_W:
@@ -40,6 +41,7 @@ void Freecam::registerEvents() {
 		prevCursorPos = newPos;
 	});
 	sys::s_glfw->registerMouseButtonCallback([this](int button, bool action) {
+		if (action && ImGui::GetIO().WantCaptureMouse) return;
 		if (button == GLFW_MOUSE_BUTTON_LEFT)
 			moving = action;
 	});
