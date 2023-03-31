@@ -5,6 +5,7 @@ include(cmake/Dependencies.cmake)
 set(SHADER_DIR_PREFIX src/gpu/)
 set(SHADER_SOURCES
 	tonemap/uchimura.comp
+	tonemap/reinhard.comp
 	tonemap/linear.comp
 	tonemap/hable.comp
 	tonemap/aces.comp

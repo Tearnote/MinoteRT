@@ -10,6 +10,8 @@ namespace minote::gfx::modules {
 
 auto tonemapLinear(vuk::Future input, float exposure) -> vuk::Future;
 
+auto tonemapReinhard(vuk::Future input, float exposure, float hdrMax) -> vuk::Future;
+
 auto tonemapHable(vuk::Future input, float exposure) -> vuk::Future;
 
 auto tonemapAces(vuk::Future input, float exposure) -> vuk::Future;

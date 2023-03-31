@@ -65,6 +65,60 @@ auto tonemapLinear(vuk::Future _input, float _exposure) -> vuk::Future {
 
 }
 
+auto tonemapReinhard(vuk::Future _input, float _exposure, float _hdrMax) -> vuk::Future {
+
+	static auto compiled = false;
+	if (!compiled) {
+		compiled = true;
+
+		auto tonemapReinhardPci = vuk::PipelineBaseCreateInfo();
+		constexpr auto tonemapReinhardSource = std::to_array<uint>({
+#include "spv/tonemap/reinhard.comp.spv"
+		});
+		tonemapReinhardPci.add_static_spirv(tonemapReinhardSource.data(), tonemapReinhardSource.size(), "tonemap/reinhard.comp");
+		sys::s_vulkan->context.create_named_pipeline("tonemap/reinhard", tonemapReinhardPci);
+	}
+
+	auto rg = std::make_shared<vuk::RenderGraph>("tonemap/reinhard");
+	rg->attach_in("input", std::move(_input));
+	rg->attach_image("output/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(sys::s_vulkan->swapchain->extent), //TODO pending vuk bugfix
+		.format = vuk::Format::eR8G8B8A8Unorm,
+		.sample_count = vuk::Samples::e1,
+		.level_count = 1,
+		.layer_count = 1,
+	});
+//	rg->inference_rule("output/blank", vuk::same_extent_as("input")); //TODO pending vuk bugfix
+
+	rg->add_pass(vuk::Pass{
+		.name = "tonemap/reinhard",
+		.resources = {
+			"input"_image >> vuk::eComputeSampled,
+			"output/blank"_image >> vuk::eComputeWrite >> "output",
+		},
+		.execute = [_exposure, _hdrMax](vuk::CommandBuffer& cmd) {
+			cmd.bind_compute_pipeline("tonemap/reinhard")
+				.bind_image(0, 0, "input").bind_sampler(0, 0, NearestClamp)
+				.bind_image(0, 1, "output/blank");
+
+			struct Constants {
+				float exposure;
+				float hdrMax;
+			};
+			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
+				.exposure = _exposure,
+				.hdrMax = _hdrMax,
+			});
+
+			auto size = cmd.get_resource_image_attachment("output/blank")->extent.extent;
+			cmd.dispatch_invocations(size.width, size.height);
+		},
+	});
+
+	return vuk::Future(std::move(rg), "output");
+
+}
+
 auto tonemapHable(vuk::Future _input, float _exposure) -> vuk::Future {
 
 	static auto compiled = false;

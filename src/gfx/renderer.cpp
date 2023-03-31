@@ -75,13 +75,15 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 	// Tonemapper selection
 	enum class TonemapMode: int {
 		Linear = 0,
-		Hable = 1,
-		ACES = 2,
-		Uchimura = 3,
-		AMD = 4,
+		Reinhard = 1,
+		Hable = 2,
+		ACES = 3,
+		Uchimura = 4,
+		AMD = 5,
 	};
 	constexpr static auto TonemapModeStrings = std::to_array<const char*>({
     	"Linear",
+    	"Reinhard",
     	"Hable",
     	"ACES",
 		"Uchimura",
@@ -91,12 +93,16 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 	// Expose all controls via Imgui
 	static auto exposure = 1.0f;
 	static auto tonemapMode = TonemapMode::AMD;
+	static auto reinhardMax = 8.0f;
 	static auto uchimuraParams = modules::UchimuraParams::make_default();
 	static auto amdParams = modules::AMDParams::make_default();
 	if (ImGui::CollapsingHeader("Tonemapper")) {
 		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&tonemapMode),
 		             TonemapModeStrings.data(), TonemapModeStrings.size());
+		if (tonemapMode == TonemapMode::Reinhard) {
+			ImGui::SliderFloat("HDR peak", &reinhardMax, 1.0f, 32.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+		}
 		if (tonemapMode == TonemapMode::Uchimura) {
 			ImGui::SliderFloat("Max brightness", &uchimuraParams.maxBrightness, 1.0f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 			ImGui::SliderFloat("Contrast", &uchimuraParams.contrast, 0.1f, 2.4f, "%.2f");
@@ -118,6 +124,8 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 	switch (tonemapMode) {
 		case TonemapMode::Linear:
 			return modules::tonemapLinear(std::move(_input), exposure);
+		case TonemapMode::Reinhard:
+			return modules::tonemapReinhard(std::move(_input), exposure, reinhardMax);
 		case TonemapMode::Hable:
 			return modules::tonemapHable(std::move(_input), exposure);
 		case TonemapMode::ACES:

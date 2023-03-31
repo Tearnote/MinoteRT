@@ -1,0 +1,30 @@
+#version 460
+#pragma shader_stage(compute)
+
+#include "../util.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform sampler2D s_src;
+layout(binding = 1) restrict writeonly uniform image2D i_dst;
+layout(push_constant) uniform Constants {
+    float exposure;
+    float hdrMax;
+} C;
+
+// https://64.github.io/tonemapping/
+vec3 reinhard(vec3 v, float max_white) {
+    vec3 numerator = v * (1.0f + (v / vec3(max_white * max_white)));
+    return numerator / (1.0f + v);
+}
+
+void main() {
+    const uvec2 Gid = gl_GlobalInvocationID.xy;
+    const uvec2 DstSize = uvec2(imageSize(i_dst));
+    if (any(greaterThanEqual(Gid, DstSize))) return;
+
+    vec3 source = texelFetch(s_src, ivec2(Gid), 0).xyz;
+    source *= C.exposure;
+    vec3 mapped = reinhard(source, C.hdrMax);
+    imageStore(i_dst, ivec2(Gid), vec4(srgbEncode(mapped), 1.0));
+}
