@@ -13,6 +13,7 @@
 #include "sys/glfw.hpp"
 #include "sys/vulkan.hpp"
 #include "gfx/modules/pathtrace.hpp"
+#include "gfx/modules/denoise.hpp"
 #include "gfx/modules/tonemap.hpp"
 
 namespace minote::gfx {
@@ -45,7 +46,8 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	// Create a rendergraph
 	auto gbuffer = modules::primaryRays(outputSize, _camera, m_prevCamera);
 	auto pathtraced = modules::secondaryRays(std::move(gbuffer), _camera);
-	auto tonemapped = tonemap(std::move(pathtraced));
+	auto filtered = denoise(std::move(pathtraced));
+	auto tonemapped = tonemap(std::move(filtered));
 	auto imgui = m_imgui.render(frameAllocator, std::move(tonemapped));
 	blitAndPresent(std::move(imgui), frameAllocator);
 
@@ -67,6 +69,43 @@ void Renderer::updateFrameTime() {
 		m_framesSinceLastCheck = 0;
 	}
 	ImGui::Text("Frame time: %.2f ms", m_frameTime * 1000.0f);
+
+}
+
+auto Renderer::denoise(vuk::Future _input) -> vuk::Future {
+
+	// Tonemapper selection
+	enum class DenoiseMode: int {
+		None = 0,
+		Bilateral = 1,
+	};
+	constexpr static auto DenoiseModeStrings = std::to_array<const char*>({
+		"None",
+		"Bilateral",
+	});
+
+	// Expose all controls via Imgui
+	static auto denoiseMode = DenoiseMode::Bilateral;
+	static auto bilateralParams = modules::BilateralParams::make_default();
+	if (ImGui::CollapsingHeader("Denoiser")) {
+		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&denoiseMode),
+			DenoiseModeStrings.data(), DenoiseModeStrings.size());
+		if (denoiseMode == DenoiseMode::Bilateral) {
+			ImGui::SliderFloat("Sigma", &bilateralParams.sigma, 1.0f, 10.0f, "%.2f");
+			ImGui::SliderFloat("kSigma", &bilateralParams.kSigma, 1.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Threshold", &bilateralParams.threshold, 0.01f, 1.0f, "%.2f");
+		}
+	}
+
+	// Perform tonemapping via chosen method
+	switch (denoiseMode) {
+		case DenoiseMode::None:
+			return std::move(_input);
+		case DenoiseMode::Bilateral:
+			return modules::denoiseBilateral(std::move(_input), bilateralParams);
+		default:
+			throw stx::logic_error_fmt("Unknown denoise mode {}", +denoiseMode);
+	}
 
 }
 
@@ -99,7 +138,7 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 	if (ImGui::CollapsingHeader("Tonemapper")) {
 		ImGui::SliderFloat("Exposure", &exposure, 0.1f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&tonemapMode),
-		             TonemapModeStrings.data(), TonemapModeStrings.size());
+			TonemapModeStrings.data(), TonemapModeStrings.size());
 		if (tonemapMode == TonemapMode::Reinhard) {
 			ImGui::SliderFloat("HDR peak", &reinhardMax, 1.0f, 32.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 		}

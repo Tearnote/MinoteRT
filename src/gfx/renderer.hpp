@@ -36,6 +36,7 @@ private:
 	uint m_framesSinceLastCheck;
 
 	void updateFrameTime();
+	auto denoise(vuk::Future) -> vuk::Future;
 	auto tonemap(vuk::Future) -> vuk::Future;
 	void blitAndPresent(vuk::Future, vuk::Allocator& _allocator);
 

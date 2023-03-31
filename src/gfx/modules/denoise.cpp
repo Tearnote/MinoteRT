@@ -1,0 +1,57 @@
+#include "gfx/modules/denoise.hpp"
+
+#include <vuk/CommandBuffer.hpp>
+#include <vuk/RenderGraph.hpp>
+
+#include "sys/vulkan.hpp"
+#include "gfx/samplers.hpp"
+
+namespace minote::gfx::modules {
+
+auto denoiseBilateral(vuk::Future _input, BilateralParams _params) -> vuk::Future {
+
+	static auto compiled = false;
+	if (!compiled) {
+		compiled = true;
+
+		auto denoiseBilateralPci = vuk::PipelineBaseCreateInfo();
+		constexpr auto denoiseBilateralSource = std::to_array<uint>({
+#include "spv/denoise/bilateral.comp.spv"
+		});
+		denoiseBilateralPci.add_static_spirv(denoiseBilateralSource.data(), denoiseBilateralSource.size(), "denoise/bilateral.comp");
+		sys::s_vulkan->context.create_named_pipeline("denoise/bilateral", denoiseBilateralPci);
+	}
+
+	auto rg = std::make_shared<vuk::RenderGraph>("denoise/bilateral");
+	rg->attach_in("input", std::move(_input));
+	rg->attach_image("output/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(sys::s_vulkan->swapchain->extent), //TODO pending vuk bugfix
+		.format = vuk::Format::eR8G8B8A8Unorm,
+		.sample_count = vuk::Samples::e1,
+		.level_count = 1,
+		.layer_count = 1,
+	});
+//	rg->inference_rule("output/blank", vuk::same_extent_as("input")); //TODO pending vuk bugfix
+
+	rg->add_pass(vuk::Pass{
+		.name = "denoise/bilateral",
+		.resources = {
+			"input"_image >> vuk::eComputeSampled,
+			"output/blank"_image >> vuk::eComputeWrite >> "output",
+		},
+		.execute = [_params](vuk::CommandBuffer& cmd) {
+			cmd.bind_compute_pipeline("denoise/bilateral")
+				.bind_image(0, 0, "input").bind_sampler(0, 0, LinearClamp)
+				.bind_image(0, 1, "output/blank");
+			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, _params);
+
+			auto size = cmd.get_resource_image_attachment("output/blank")->extent.extent;
+			cmd.dispatch_invocations(size.width, size.height);
+		},
+	});
+
+	return vuk::Future(std::move(rg), "output");
+
+}
+
+}
