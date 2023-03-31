@@ -65,6 +65,58 @@ auto tonemapLinear(vuk::Future _input, float _exposure) -> vuk::Future {
 
 }
 
+auto tonemapHable(vuk::Future _input, float _exposure) -> vuk::Future {
+
+	static auto compiled = false;
+	if (!compiled) {
+		compiled = true;
+
+		auto tonemapHablePci = vuk::PipelineBaseCreateInfo();
+		constexpr auto tonemapHableSource = std::to_array<uint>({
+#include "spv/tonemap/hable.comp.spv"
+		});
+		tonemapHablePci.add_static_spirv(tonemapHableSource.data(), tonemapHableSource.size(), "tonemap/hable.comp");
+		sys::s_vulkan->context.create_named_pipeline("tonemap/hable", tonemapHablePci);
+	}
+
+	auto rg = std::make_shared<vuk::RenderGraph>("tonemap/hable");
+	rg->attach_in("input", std::move(_input));
+	rg->attach_image("output/blank", vuk::ImageAttachment{
+		.extent = vuk::Dimension3D::absolute(sys::s_vulkan->swapchain->extent), //TODO pending vuk bugfix
+		.format = vuk::Format::eR8G8B8A8Unorm,
+		.sample_count = vuk::Samples::e1,
+		.level_count = 1,
+		.layer_count = 1,
+	});
+//	rg->inference_rule("output/blank", vuk::same_extent_as("input")); //TODO pending vuk bugfix
+
+	rg->add_pass(vuk::Pass{
+		.name = "tonemap/hable",
+		.resources = {
+			"input"_image >> vuk::eComputeSampled,
+			"output/blank"_image >> vuk::eComputeWrite >> "output",
+		},
+		.execute = [_exposure](vuk::CommandBuffer& cmd) {
+			cmd.bind_compute_pipeline("tonemap/hable")
+				.bind_image(0, 0, "input").bind_sampler(0, 0, NearestClamp)
+				.bind_image(0, 1, "output/blank");
+
+			struct Constants {
+				float exposure;
+			};
+			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
+				.exposure = _exposure,
+			});
+
+			auto size = cmd.get_resource_image_attachment("output/blank")->extent.extent;
+			cmd.dispatch_invocations(size.width, size.height);
+		},
+	});
+
+	return vuk::Future(std::move(rg), "output");
+
+}
+
 auto tonemapAces(vuk::Future _input, float _exposure) -> vuk::Future {
 
 	static auto compiled = false;
@@ -75,7 +127,7 @@ auto tonemapAces(vuk::Future _input, float _exposure) -> vuk::Future {
 		constexpr auto tonemapAcesSource = std::to_array<uint>({
 #include "spv/tonemap/aces.comp.spv"
 		});
-		tonemapAcesPci.add_static_spirv(tonemapAcesSource.data(), tonemapAcesSource.size(), "tonemap/uchimura.comp");
+		tonemapAcesPci.add_static_spirv(tonemapAcesSource.data(), tonemapAcesSource.size(), "tonemap/aces.comp");
 		sys::s_vulkan->context.create_named_pipeline("tonemap/aces", tonemapAcesPci);
 	}
 

@@ -1,0 +1,39 @@
+#version 460
+#pragma shader_stage(compute)
+
+#include "../util.glsl"
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform sampler2D s_src;
+layout(binding = 1) restrict writeonly uniform image2D i_dst;
+layout(push_constant) uniform Constants {
+    float exposure;
+} C;
+
+vec3 hableOp(vec3 x) {
+    float A = 0.15;
+    float B = 0.50;
+    float C = 0.10;
+    float D = 0.20;
+    float E = 0.02;
+    float F = 0.30;
+
+    return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
+}
+
+vec3 hable(vec3 color) {
+    const float W = 11.2;
+    return hableOp(2.0 * color) / hableOp(vec3(W));
+}
+
+void main() {
+    const uvec2 Gid = gl_GlobalInvocationID.xy;
+    const uvec2 DstSize = uvec2(imageSize(i_dst));
+    if (any(greaterThanEqual(Gid, DstSize))) return;
+
+    vec3 source = texelFetch(s_src, ivec2(Gid), 0).xyz;
+    source *= C.exposure;
+    vec3 mapped = hable(source);
+    imageStore(i_dst, ivec2(Gid), vec4(srgbEncode(mapped), 1.0));
+}

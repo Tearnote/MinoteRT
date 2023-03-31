@@ -75,11 +75,13 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 	// Tonemapper selection
 	enum class TonemapMode: int {
 		Linear = 0,
-		ACES = 1,
-		Uchimura = 2,
+		Hable = 1,
+		ACES = 2,
+		Uchimura = 3,
 	};
 	constexpr static auto TonemapModeStrings = std::to_array<const char*>({
     	"Linear",
+    	"Hable",
     	"ACES",
 		"Uchimura",
     });
@@ -106,6 +108,8 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 	switch (tonemapMode) {
 		case TonemapMode::Linear:
 			return modules::tonemapLinear(std::move(_input), exposure);
+		case TonemapMode::Hable:
+			return modules::tonemapHable(std::move(_input), exposure);
 		case TonemapMode::ACES:
 			return modules::tonemapAces(std::move(_input), exposure);
 		case TonemapMode::Uchimura:
