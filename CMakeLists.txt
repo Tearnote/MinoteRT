@@ -40,6 +40,7 @@ add_executable(MinoteRT
 	src/stx/except.hpp
 	src/stx/ranges.hpp
 	src/stx/verify.hpp
+	src/stx/enum.hpp
 	src/stx/time.hpp
 	src/freecam.hpp src/freecam.cpp
 	src/config.hpp

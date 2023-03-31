@@ -8,6 +8,8 @@
 #include <imgui.h>
 
 #include "math.hpp"
+#include "stx/except.hpp"
+#include "stx/enum.hpp"
 #include "sys/glfw.hpp"
 #include "sys/vulkan.hpp"
 #include "gfx/modules/pathtrace.hpp"
@@ -16,6 +18,7 @@
 namespace minote::gfx {
 
 using namespace math_literals;
+using namespace stx::enum_literals;
 
 Renderer::Renderer():
 	m_deviceResource(sys::s_vulkan->context, InflightFrames),
@@ -44,33 +47,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	auto pathtraced = modules::secondaryRays(std::move(gbuffer), _camera);
 	auto tonemapped = tonemap(std::move(pathtraced));
 	auto imgui = m_imgui.render(frameAllocator, std::move(tonemapped));
-
-	// Blit to swapchain
-	auto rg = std::make_shared<vuk::RenderGraph>("main");
-	rg->attach_in("imgui", std::move(imgui));
-	rg->attach_swapchain("swapchain/blank", sys::s_vulkan->swapchain);
-	rg->add_pass(vuk::Pass{
-		.name = "swapchain blit",
-		.resources = {
-			"imgui"_image >> vuk::eTransferRead,
-			"swapchain/blank"_image >> vuk::eTransferWrite >> "swapchain",
-		},
-		.execute = [outputSize](vuk::CommandBuffer& cmd) {
-			cmd.blit_image("imgui", "swapchain/blank", vuk::ImageBlit{
-				.srcSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
-				.srcOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(outputSize.x()), int(outputSize.y()), 1}},
-				.dstSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
-				.dstOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(outputSize.x()), int(outputSize.y()), 1}} },
-			vuk::Filter::eNearest);
-		},
-	});
-
-	// Acquire, submit and present
-	auto compiler = vuk::Compiler();
-	auto erg = *compiler.link(stx::ptr_span(&rg), {});
-	auto acquireBundle = *vuk::acquire_one(frameAllocator, sys::s_vulkan->swapchain);
-	auto submitBundle = *vuk::execute_submit(frameAllocator, std::move(erg), std::move(acquireBundle));
-	vuk::present_to_one(sys::s_vulkan->context, std::move(submitBundle));
+	blitAndPresent(std::move(imgui), frameAllocator);
 
 	// Temporal preservation
 	m_prevCamera = _camera;
@@ -129,7 +106,41 @@ auto Renderer::tonemap(vuk::Future _input) -> vuk::Future {
 			return modules::tonemapLinear(std::move(_input), exposure);
 		case TonemapMode::Uchimura:
 			return modules::tonemapUchimura(std::move(_input), exposure, uchimuraParams);
+		default:
+			throw stx::logic_error_fmt("Unknown tonemap mode {}", +tonemapMode);
 	}
+
+}
+
+void Renderer::blitAndPresent(vuk::Future _source, vuk::Allocator& _allocator) {
+
+	// Blit to swapchain
+	auto rg = std::make_shared<vuk::RenderGraph>("swapchain");
+	rg->attach_in("source", std::move(_source));
+	rg->attach_swapchain("swapchain/blank", sys::s_vulkan->swapchain);
+	rg->add_pass(vuk::Pass{
+		.name = "swapchain blit",
+		.resources = {
+			"source"_image >> vuk::eTransferRead,
+			"swapchain/blank"_image >> vuk::eTransferWrite >> "swapchain",
+		},
+		.execute = [](vuk::CommandBuffer& cmd) {
+			auto size = cmd.get_resource_image_attachment("swapchain/blank")->extent.extent;
+			cmd.blit_image("source", "swapchain/blank", vuk::ImageBlit{
+				               .srcSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
+				               .srcOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(size.width), int(size.height), 1}},
+				               .dstSubresource = vuk::ImageSubresourceLayers{ .aspectMask = vuk::ImageAspectFlagBits::eColor },
+				               .dstOffsets = {vuk::Offset3D{0, 0, 0}, vuk::Offset3D{int(size.width), int(size.height), 1}} },
+			               vuk::Filter::eNearest);
+		},
+	});
+
+	// Acquire, submit and present
+	auto compiler = vuk::Compiler();
+	auto erg = *compiler.link(stx::ptr_span(&rg), {});
+	auto acquireBundle = *vuk::acquire_one(_allocator, sys::s_vulkan->swapchain);
+	auto submitBundle = *vuk::execute_submit(_allocator, std::move(erg), std::move(acquireBundle));
+	vuk::present_to_one(sys::s_vulkan->context, std::move(submitBundle));
 
 }
 

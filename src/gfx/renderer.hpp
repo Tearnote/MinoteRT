@@ -1,12 +1,13 @@
 #pragma once
 
-#include <vuk/Allocator.hpp>
 #include <vuk/resources/DeviceFrameResource.hpp>
+#include <vuk/Allocator.hpp>
 
 #include "types.hpp"
 #include "stx/time.hpp"
 #include "gfx/camera.hpp"
 #include "gfx/imgui.hpp"
+
 
 namespace minote::gfx {
 
@@ -36,6 +37,7 @@ private:
 
 	void updateFrameTime();
 	auto tonemap(vuk::Future) -> vuk::Future;
+	void blitAndPresent(vuk::Future, vuk::Allocator& _allocator);
 
 };
 
