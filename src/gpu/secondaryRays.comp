@@ -32,7 +32,7 @@ float rotatedRandom(inout uint state, float rotation) {
 	return fract(randomFloat(state) + rotation);
 }
 
-vec3 traceSecondaryRays(Intersection primaryHit, uint maxDepth, inout uint rngState, float rngRotation) {
+vec3 traceSecondaryRays(Intersection primaryHit, uint maxDepth, inout uint rngState, vec2 rngRotation) {
 	vec3 color = vec3(1.0);
 	Intersection closestHit = primaryHit;
 	for (uint i = 0; i < maxDepth; i += 1) {
@@ -40,7 +40,7 @@ vec3 traceSecondaryRays(Intersection primaryHit, uint maxDepth, inout uint rngSt
 			// Formulate ray
 			Ray ray;
 			ray.origin = closestHit.position + closestHit.normal * 0.001;
-			ray.direction = normalize(closestHit.normal + randomSpherePoint(vec3(rotatedRandom(rngState, rngRotation), rotatedRandom(rngState, rngRotation), rotatedRandom(rngState, rngRotation)) * 2.0 - 1.0));
+			ray.direction = normalize(closestHit.normal + randomSpherePoint(vec2(rotatedRandom(rngState, rngRotation.x), rotatedRandom(rngState, rngRotation.y)) * 2.0 - 1.0));
 
 			// Find closest hit
 			closestHit.primitiveId = -1u;
@@ -101,8 +101,8 @@ void main() {
 	vec3 viewPosition = {uvScaled.x, -linearDepth, uvScaled.y};
 	primaryHit.position = vec3(C.view * vec4(viewPosition, 1.0));
 	primaryHit.t = length(primaryHit.position - CameraOrigin);
-	uint seed = (C.frameCounter << 1) | 1;
-	float rotation = texelFetch(s_blueNoise, ivec2(Gid) % textureSize(s_blueNoise, 0), 0).x;
+	uint seed = (C.frameCounter << 1u) | 1u;
+	vec2 rotation = texelFetch(s_blueNoise, ivec2(Gid) % textureSize(s_blueNoise, 0), 0).xy;
 
 	// Fire secondary rays
 	vec3 color = traceSecondaryRays(primaryHit, 40, seed, rotation);

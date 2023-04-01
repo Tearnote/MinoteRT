@@ -7,7 +7,7 @@ const vec3 RandomScale3 = {0.1031, 0.1030, 0.0973};
 
 // https://github.com/LWJGL/lwjgl3-demos/blob/main/res/org/lwjgl/demo/opengl/raytracing/randomCommon.glsl
 // BSD 3-Clause licensed
-vec3 randomSpherePoint(vec3 rand) {
+vec3 randomSpherePoint(vec2 rand) {
     float ang1 = (rand.x + 1.0) * Pi; // [-1..1) -> [0..2*PI)
     float u = rand.y; // [-1..1), cos and acos(2v-1) cancel each other out, so we arrive at [-1..1)
     float u2 = u * u;

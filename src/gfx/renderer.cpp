@@ -30,9 +30,9 @@ Renderer::Renderer():
 
 	auto pixels = std::vector<unsigned char>();
 	auto pixelsSize = uvec2();
-	lodepng::decode(pixels, pixelsSize.x(), pixelsSize.y(), "assets/blue_noise.png", LCT_GREY, 8);
+	lodepng::decode(pixels, pixelsSize.x(), pixelsSize.y(), "assets/blue_noise.png", LCT_RGBA, 8);
 	auto [pixelsTex, stub] = vuk::create_texture(m_multiFrameAllocator,
-		vuk::Format::eR8Unorm, vuk::Extent3D{pixelsSize.x(), pixelsSize.y(), 1u},
+		vuk::Format::eR8G8B8A8Unorm, vuk::Extent3D{pixelsSize.x(), pixelsSize.y(), 1u},
 		pixels.data(), false);
 	m_blueNoise = std::move(pixelsTex);
 	auto comp = vuk::Compiler();
