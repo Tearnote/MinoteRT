@@ -16,6 +16,6 @@ struct GBuffer {
 
 auto primaryRays(uvec2 size, Camera const& camera, Camera const& prevCamera) -> GBuffer;
 
-auto secondaryRays(GBuffer&&, Camera const&, vuk::Texture& blueNoise) -> vuk::Future;
+auto secondaryRays(GBuffer, Camera const&, vuk::Texture& blueNoise) -> vuk::Future;
 
 }

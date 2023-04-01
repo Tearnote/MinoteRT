@@ -3,8 +3,9 @@
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
-layout(binding = 0) uniform sampler2D s_src;
-layout(binding = 1) restrict writeonly uniform image2D i_dst;
+layout(binding = 0) uniform sampler2D s_color;
+layout(binding = 1) uniform sampler2D s_depth;
+layout(binding = 2) restrict writeonly uniform image2D i_dst;
 layout(push_constant) uniform Constants {
     float sigma;
     float kSigma;
@@ -14,7 +15,7 @@ layout(push_constant) uniform Constants {
 #define INV_SQRT_OF_2PI 0.39894228040143267793994605993439  // 1.0/SQRT_OF_2PI
 #define INV_PI 0.31830988618379067153776752674503
 
-vec4 smartDeNoise(sampler2D tex, vec2 uv, float sigma, float kSigma, float threshold) {
+vec4 smartDeNoise(sampler2D tex, sampler2D depthTex, vec2 uv, float sigma, float kSigma, float threshold) {
     float radius = round(kSigma*sigma);
     float radQ = radius * radius;
 
@@ -25,6 +26,7 @@ vec4 smartDeNoise(sampler2D tex, vec2 uv, float sigma, float kSigma, float thres
     float invThresholdSqrt2PI = INV_SQRT_OF_2PI / threshold;   // 1.0 / (sqrt(2*PI) * sigma^2)
 
     vec4 centrPx = texture(tex,uv);
+    vec4 centrZ = texture(depthTex,uv);
 
     float zBuff = 0.0;
     vec4 aBuff = vec4(0.0);
@@ -37,7 +39,8 @@ vec4 smartDeNoise(sampler2D tex, vec2 uv, float sigma, float kSigma, float thres
             float blurFactor = exp( -dot(d , d) * invSigmaQx2 ) * invSigmaQx2PI;
 
             vec4 walkPx =  texture(tex,uv+d/size);
-            vec4 dC = walkPx-centrPx;
+            vec4 walkZ =  texture(depthTex,uv+d/size);
+            vec4 dC = walkZ-centrZ;
             float deltaFactor = exp( -dot(dC, dC) * invThresholdSqx2) * invThresholdSqrt2PI * blurFactor;
 
             zBuff += deltaFactor;
@@ -53,6 +56,6 @@ void main() {
     if (any(greaterThanEqual(Gid, DstSize))) return;
 
     vec2 uv = (vec2(Gid) + vec2(0.5)) / vec2(DstSize);
-    vec4 filtered = smartDeNoise(s_src, uv, C.sigma, C.kSigma, C.threshold);
+    vec4 filtered = smartDeNoise(s_color, s_depth, uv, C.sigma, C.kSigma, C.threshold);
     imageStore(i_dst, ivec2(Gid), filtered);
 }

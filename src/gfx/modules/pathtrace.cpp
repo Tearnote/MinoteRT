@@ -101,7 +101,7 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 
 }
 
-auto secondaryRays(GBuffer&& _gbuffer, Camera const& _camera, vuk::Texture& _blueNoise) -> vuk::Future {
+auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueNoise) -> vuk::Future {
 
 	static auto compiled = false;
 	if (!compiled) {

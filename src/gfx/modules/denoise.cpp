@@ -8,7 +8,7 @@
 
 namespace minote::gfx::modules {
 
-auto denoiseBilateral(vuk::Future _input, BilateralParams _params) -> vuk::Future {
+auto denoiseBilateral(vuk::Future _color, vuk::Future _depth, BilateralParams _params) -> vuk::Future {
 
 	static auto compiled = false;
 	if (!compiled) {
@@ -23,7 +23,8 @@ auto denoiseBilateral(vuk::Future _input, BilateralParams _params) -> vuk::Futur
 	}
 
 	auto rg = std::make_shared<vuk::RenderGraph>("denoise/bilateral");
-	rg->attach_in("input", std::move(_input));
+	rg->attach_in("color", std::move(_color));
+	rg->attach_in("depth", std::move(_depth));
 	rg->attach_image("output/blank", vuk::ImageAttachment{
 		.extent = vuk::Dimension3D::absolute(sys::s_vulkan->swapchain->extent), //TODO pending vuk bugfix
 		.format = vuk::Format::eR8G8B8A8Unorm,
@@ -36,13 +37,15 @@ auto denoiseBilateral(vuk::Future _input, BilateralParams _params) -> vuk::Futur
 	rg->add_pass(vuk::Pass{
 		.name = "denoise/bilateral",
 		.resources = {
-			"input"_image >> vuk::eComputeSampled,
+			"color"_image >> vuk::eComputeSampled,
+			"depth"_image >> vuk::eComputeSampled,
 			"output/blank"_image >> vuk::eComputeWrite >> "output",
 		},
 		.execute = [_params](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("denoise/bilateral")
-				.bind_image(0, 0, "input").bind_sampler(0, 0, LinearClamp)
-				.bind_image(0, 1, "output/blank");
+				.bind_image(0, 0, "color").bind_sampler(0, 0, LinearClamp)
+				.bind_image(0, 1, "depth").bind_sampler(0, 1, LinearClamp)
+				.bind_image(0, 2, "output/blank");
 			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, _params);
 
 			auto size = cmd.get_resource_image_attachment("output/blank")->extent.extent;
