@@ -100,6 +100,11 @@ void main() {
 	vec2 rotation = texelFetch(s_blueNoise, ivec2(Gid) % textureSize(s_blueNoise, 0), 0).xy;
 
 	// Fire secondary rays
-	vec3 color = traceSecondaryRays(primaryHit, 40, seed, rotation);
-	imageStore(i_color, ivec2(Gid), vec4(color, 1.0));
+	const uint Samples = 8u;
+	const uint Bounces = 8u;
+	vec3 color = vec3(0.0);
+	for (uint i = 0u; i < Samples; i += 1u)
+		color += tonemap(traceSecondaryRays(primaryHit, Bounces - 1u, seed, rotation));
+	color /= Samples;
+	imageStore(i_color, ivec2(Gid), vec4(tonemapInvert(color), 1.0));
 }

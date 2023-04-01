@@ -99,7 +99,7 @@ auto Renderer::denoise(vuk::Future _color, vuk::Future _depth, vuk::Future _norm
 	});
 
 	// Expose all controls via Imgui
-	static auto denoiseMode = DenoiseMode::None;
+	static auto denoiseMode = DenoiseMode::Bilateral;
 	static auto bilateralParams = modules::BilateralParams::make_default();
 	if (ImGui::CollapsingHeader("Denoiser")) {
 		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&denoiseMode),
