@@ -60,7 +60,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 	// Create a rendergraph
 	auto gbuffer = modules::primaryRays(outputSize, _camera, m_prevCamera);
 	auto pathtraced = modules::secondaryRays(gbuffer, _camera, m_blueNoise);
-	auto filtered = denoise(std::move(pathtraced), gbuffer.depth);
+	auto filtered = denoise(std::move(pathtraced), gbuffer.depth, gbuffer.normal);
 	auto tonemapped = tonemap(std::move(filtered));
 	auto imgui = m_imgui.render(frameAllocator, std::move(tonemapped));
 	blitAndPresent(std::move(imgui), frameAllocator);
@@ -86,7 +86,7 @@ void Renderer::updateFrameTime() {
 
 }
 
-auto Renderer::denoise(vuk::Future _color, vuk::Future _depth) -> vuk::Future {
+auto Renderer::denoise(vuk::Future _color, vuk::Future _depth, vuk::Future _normal) -> vuk::Future {
 
 	// Tonemapper selection
 	enum class DenoiseMode: int {
@@ -116,7 +116,7 @@ auto Renderer::denoise(vuk::Future _color, vuk::Future _depth) -> vuk::Future {
 		case DenoiseMode::None:
 			return std::move(_color);
 		case DenoiseMode::Bilateral:
-			return modules::denoiseBilateral(std::move(_color), std::move(_depth), bilateralParams);
+			return modules::denoiseBilateral(std::move(_color), std::move(_depth), std::move(_normal), bilateralParams);
 		default:
 			throw stx::logic_error_fmt("Unknown denoise mode {}", +denoiseMode);
 	}

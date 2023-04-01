@@ -22,6 +22,6 @@ struct BilateralParams {
 	}
 };
 
-auto denoiseBilateral(vuk::Future color, vuk::Future depth, BilateralParams) -> vuk::Future;
+auto denoiseBilateral(vuk::Future color, vuk::Future depth, vuk::Future normal, BilateralParams) -> vuk::Future;
 
 }
