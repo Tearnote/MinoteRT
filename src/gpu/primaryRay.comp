@@ -8,9 +8,8 @@ layout(local_size_x = 8, local_size_y = 8) in;
 layout(binding = 0) restrict writeonly uniform uimage2D i_visibility;
 layout(binding = 1) restrict writeonly uniform image2D i_depth;
 layout(binding = 2) restrict writeonly uniform image2D i_normal;
-layout(binding = 3) restrict writeonly uniform uimage2D i_seed;
-layout(binding = 4) restrict writeonly uniform image2D i_motion;
-layout(binding = 5) uniform Constants {
+layout(binding = 3) restrict writeonly uniform image2D i_motion;
+layout(binding = 4) uniform Constants {
     mat4 view;
     mat4 prevView;
     uint frameCounter;
@@ -81,9 +80,6 @@ void main() {
     else
         normal = ray.direction;
     imageStore(i_normal, ivec2(Gid), vec4(normal, 0.0));
-
-    uint seed = (Gid.x * 1973u + Gid.y * 9277u + C.frameCounter * 26699u) | 1u;
-    imageStore(i_seed, ivec2(Gid), uvec4(seed));
 
     vec3 hitPos = primaryHit.position;
     vec3 prevViewSpaceHit = vec3(inverse(C.prevView) * vec4(hitPos, 1.0));

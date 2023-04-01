@@ -35,6 +35,8 @@ private:
 	stx::nsec m_lastFrameTimeCheck;
 	uint m_framesSinceLastCheck;
 
+	vuk::Texture m_blueNoise;
+
 	void updateFrameTime();
 	auto denoise(vuk::Future) -> vuk::Future;
 	auto tonemap(vuk::Future) -> vuk::Future;

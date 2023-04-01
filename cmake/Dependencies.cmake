@@ -76,3 +76,11 @@ target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_OBSOLETE_KEYIO)
 target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_WIN32_FUNCTIONS)
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR})
 target_link_libraries(imgui PRIVATE glfw)
+
+FetchContent_Declare(lodepng
+	GIT_REPOSITORY https://github.com/lvandeve/lodepng
+	GIT_TAG 997936fd2b45842031e4180d73d7880e381cf33f)
+FetchContent_MakeAvailable(lodepng)
+add_library(lodepng
+	${lodepng_SOURCE_DIR}/lodepng.h ${lodepng_SOURCE_DIR}/lodepng.cpp)
+target_include_directories(lodepng PUBLIC ${lodepng_SOURCE_DIR})

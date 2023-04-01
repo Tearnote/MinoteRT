@@ -51,13 +51,6 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 		.level_count = 1,
 		.layer_count = 1,
 	});
-	rg->attach_image("seed/blank", vuk::ImageAttachment{
-		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y(), 1u),
-		.format = vuk::Format::eR32Uint,
-		.sample_count = vuk::Samples::e1,
-		.level_count = 1,
-		.layer_count = 1,
-	});
 	rg->attach_image("motion/blank", vuk::ImageAttachment{
 		.extent = vuk::Dimension3D::absolute(_size.x(), _size.y(), 1u),
 		.format = vuk::Format::eR16G16Sfloat,
@@ -72,7 +65,6 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 			"visibility/blank"_image >> vuk::eComputeWrite >> "visibility",
 			"depth/blank"_image >> vuk::eComputeWrite >> "depth",
 			"normal/blank"_image >> vuk::eComputeWrite >> "normal",
-			"seed/blank"_image >> vuk::eComputeWrite >> "seed",
 			"motion/blank"_image >> vuk::eComputeWrite >> "motion",
 		},
 		.execute = [_size, &_camera, &_prevCamera](vuk::CommandBuffer& cmd) {
@@ -80,8 +72,7 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 				.bind_image(0, 0, "visibility/blank")
 				.bind_image(0, 1, "depth/blank")
 				.bind_image(0, 2, "normal/blank")
-				.bind_image(0, 3, "seed/blank")
-				.bind_image(0, 4, "motion/blank");
+				.bind_image(0, 3, "motion/blank");
 
 			struct Constants {
 				mat4 view;
@@ -89,7 +80,7 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 				uint frameCounter;
 				float vFov;
 			};
-			auto* constants = cmd.map_scratch_buffer<Constants>(0, 5);
+			auto* constants = cmd.map_scratch_buffer<Constants>(0, 4);
 			*constants = Constants{
 				.view = _camera.view(),
 				.prevView = _prevCamera.view(),
@@ -105,13 +96,12 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 		.visibility = vuk::Future(rg, "visibility"),
 		.depth = vuk::Future(rg, "depth"),
 		.normal = vuk::Future(rg, "normal"),
-		.seed = vuk::Future(rg, "seed"),
 		.motion = vuk::Future(rg, "motion"),
 	};
 
 }
 
-auto secondaryRays(GBuffer&& _gbuffer, Camera const& _camera) -> vuk::Future {
+auto secondaryRays(GBuffer&& _gbuffer, Camera const& _camera, vuk::Texture& _blueNoise) -> vuk::Future {
 
 	static auto compiled = false;
 	if (!compiled) {
@@ -129,7 +119,6 @@ auto secondaryRays(GBuffer&& _gbuffer, Camera const& _camera) -> vuk::Future {
 	rg->attach_in("visibility", std::move(_gbuffer.visibility));
 	rg->attach_in("depth", std::move(_gbuffer.depth));
 	rg->attach_in("normal", std::move(_gbuffer.normal));
-	rg->attach_in("seed", std::move(_gbuffer.seed));
 	rg->attach_image("color/blank", vuk::ImageAttachment{
 		.format = vuk::Format::eR16G16B16A16Sfloat,
 		.sample_count = vuk::Samples::e1,
@@ -144,25 +133,26 @@ auto secondaryRays(GBuffer&& _gbuffer, Camera const& _camera) -> vuk::Future {
 			"visibility"_image >> vuk::eComputeSampled,
 			"depth"_image >> vuk::eComputeSampled,
 			"normal"_image >> vuk::eComputeSampled,
-			"seed"_image >> vuk::eComputeSampled,
 			"color/blank"_image >> vuk::eComputeWrite >> "color",
 		},
-		.execute = [&_camera](vuk::CommandBuffer& cmd) {
+		.execute = [&_camera, &_blueNoise](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("secondary_rays")
 				.bind_image(0, 0, "visibility").bind_sampler(0, 0, NearestClamp)
 				.bind_image(0, 1, "depth").bind_sampler(0, 1, NearestClamp)
 				.bind_image(0, 2, "normal").bind_sampler(0, 2, NearestClamp)
-				.bind_image(0, 3, "seed").bind_sampler(0, 3, NearestClamp)
+				.bind_image(0, 3, *_blueNoise.view, vuk::ImageLayout::eShaderReadOnlyOptimal).bind_sampler(0, 3, NearestClamp)
 				.bind_image(0, 4, "color/blank");
 
 			struct Constants {
 				mat4 view;
 				float vFov;
+				uint frameCounter;
 			};
 			auto* constants = cmd.map_scratch_buffer<Constants>(0, 5);
 			*constants = Constants{
 				.view = _camera.view(),
 				.vFov = 60_deg,
+				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
 			};
 
 			auto colorSize = cmd.get_resource_image_attachment("color/blank").value().extent.extent;

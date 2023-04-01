@@ -4,7 +4,9 @@
 
 #include <vuk/CommandBuffer.hpp>
 #include <vuk/RenderGraph.hpp>
+#include <vuk/Partials.hpp>
 #include <vuk/Context.hpp>
+#include <lodepng.h>
 #include <imgui.h>
 
 #include "math.hpp"
@@ -24,7 +26,19 @@ using namespace stx::enum_literals;
 Renderer::Renderer():
 	m_deviceResource(sys::s_vulkan->context, InflightFrames),
 	m_multiFrameAllocator(m_deviceResource),
-	m_imgui(m_multiFrameAllocator) {}
+	m_imgui(m_multiFrameAllocator) {
+
+	auto pixels = std::vector<unsigned char>();
+	auto pixelsSize = uvec2();
+	lodepng::decode(pixels, pixelsSize.x(), pixelsSize.y(), "assets/blue_noise.png", LCT_GREY, 8);
+	auto [pixelsTex, stub] = vuk::create_texture(m_multiFrameAllocator,
+		vuk::Format::eR8Unorm, vuk::Extent3D{pixelsSize.x(), pixelsSize.y(), 1u},
+		pixels.data(), false);
+	m_blueNoise = std::move(pixelsTex);
+	auto comp = vuk::Compiler();
+	stub.wait(m_multiFrameAllocator, comp);
+
+}
 
 void Renderer::draw(gfx::Camera const& _camera) {
 
@@ -45,7 +59,7 @@ void Renderer::draw(gfx::Camera const& _camera) {
 
 	// Create a rendergraph
 	auto gbuffer = modules::primaryRays(outputSize, _camera, m_prevCamera);
-	auto pathtraced = modules::secondaryRays(std::move(gbuffer), _camera);
+	auto pathtraced = modules::secondaryRays(std::move(gbuffer), _camera, m_blueNoise);
 	auto filtered = denoise(std::move(pathtraced));
 	auto tonemapped = tonemap(std::move(filtered));
 	auto imgui = m_imgui.render(frameAllocator, std::move(tonemapped));
@@ -85,7 +99,7 @@ auto Renderer::denoise(vuk::Future _input) -> vuk::Future {
 	});
 
 	// Expose all controls via Imgui
-	static auto denoiseMode = DenoiseMode::Bilateral;
+	static auto denoiseMode = DenoiseMode::None;
 	static auto bilateralParams = modules::BilateralParams::make_default();
 	if (ImGui::CollapsingHeader("Denoiser")) {
 		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&denoiseMode),
