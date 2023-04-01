@@ -3,6 +3,7 @@
 
 #include "intersect.glsl"
 #include "random.glsl"
+#include "scene.glsl"
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
@@ -16,12 +17,6 @@ layout(binding = 5) uniform Constants {
 	float vFov;
 	uint frameCounter;
 } C;
-
-const uint SphereCount = 2;
-const Sphere Spheres[SphereCount] = {
-	{{0, -1,      0}, 0.5, {0.2, 0.7, 0.0}},
-	{{0, -1, -100.5}, 100, {0.2, 0.2, 0.2}}
-};
 
 vec3 skyColor(vec3 dir) {
 	float t = 0.5 * (dir.z + 1.0);
