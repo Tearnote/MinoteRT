@@ -49,7 +49,19 @@ auto denoiseBilateral(vuk::Future _color, vuk::Future _depth, vuk::Future _norma
 				.bind_image(0, 1, "depth").bind_sampler(0, 1, LinearClamp)
 				.bind_image(0, 2, "normal").bind_sampler(0, 2, LinearClamp)
 				.bind_image(0, 3, "output/blank");
-			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, _params);
+
+			struct Constants {
+				float sigma;
+				float kSigma;
+				float threshold;
+				uint frameCounter;
+			};
+			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
+				.sigma = _params.sigma,
+				.kSigma = _params.kSigma,
+				.threshold = _params.threshold,
+				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
+			});
 
 			auto size = cmd.get_resource_image_attachment("output/blank")->extent.extent;
 			cmd.dispatch_invocations(size.width, size.height);

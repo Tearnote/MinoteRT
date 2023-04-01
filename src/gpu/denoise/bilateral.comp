@@ -1,6 +1,8 @@
 #version 460
 #pragma shader_stage(compute)
 
+#include "../random.glsl"
+
 layout(local_size_x = 8, local_size_y = 8) in;
 
 layout(binding = 0) uniform sampler2D s_color;
@@ -11,6 +13,7 @@ layout(push_constant) uniform Constants {
     float sigma;
     float kSigma;
     float threshold;
+    uint frameCounter;
 } C;
 
 #define INV_SQRT_OF_2PI 0.39894228040143267793994605993439  // 1.0/SQRT_OF_2PI
@@ -61,5 +64,10 @@ void main() {
 
     vec2 uv = (vec2(Gid) + vec2(0.5)) / vec2(DstSize);
     vec4 filtered = smartDeNoise(s_color, s_depth, s_normal, uv, C.sigma, C.kSigma, C.threshold);
+
+    uint seed = Gid.x * 709u + Gid.y * 1153u + C.frameCounter * 1361u;
+    vec3 noise = vec3(randomFloat(seed)) * 0.005;
+    filtered.xyz += noise;
+
     imageStore(i_dst, ivec2(Gid), filtered);
 }
