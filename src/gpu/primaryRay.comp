@@ -1,5 +1,6 @@
 #version 460
 #pragma shader_stage(compute)
+#extension GL_EXT_debug_printf: enable
 
 #include "intersect.glsl"
 #include "scene.glsl"
@@ -12,9 +13,9 @@ layout(binding = 2) restrict writeonly uniform image2D i_normal;
 layout(binding = 3) restrict writeonly uniform image2D i_motion;
 layout(binding = 4) uniform Constants {
     mat4 view;
+    mat4 projection;
     mat4 prevView;
     uint frameCounter;
-    float vFov;
 } C;
 
 Intersection tracePrimaryRay(Ray ray) {
@@ -36,38 +37,29 @@ void main() {
     // Output details
     const uvec2 Gid = gl_GlobalInvocationID.xy;
     const uvec2 OutBounds = uvec2(imageSize(i_visibility));
+    const vec2 OutPitch = vec2(1.0) / vec2(OutBounds);
     if (any(greaterThanEqual(Gid, OutBounds))) return;
 
-    const vec2 OutPitch = vec2(1.0) / vec2(OutBounds);
-    vec2 outUv = (vec2(Gid) + 0.5) * OutPitch;
-    outUv.y = 1.0 - outUv.y;
-
-    // Viewport
-    const float AspectRatio = float(OutBounds.x) / float(OutBounds.y);
-    const float FocalLength = 1.0;
-    const float ViewportHeight = 2.0 * tan(C.vFov / 2.0);
-    const float ViewportWidth = AspectRatio * ViewportHeight;
-    const vec2 ViewportSize = {ViewportWidth, ViewportHeight};
-
-    // Camera
-    const vec3 HorizontalSpan = {ViewportSize.x, 0.0, 0.0};
-    const vec3 VerticalSpan = {0.0, 0.0, ViewportSize.y};
-    const vec3 LowerLeftCorner = vec3(0.0) - HorizontalSpan / 2.0 - VerticalSpan / 2.0 - vec3(0.0, FocalLength, 0.0);
-    const vec3 CameraOrigin = vec3(C.view * vec4(0.0, 0.0, 0.0, 1.0));
+    // Transformations
+    vec2 uv = (vec2(Gid) + 0.5) * OutPitch;
+    uv.y = 1.0 - uv.y;
+    const vec3 CameraOrigin = vec3(inverse(C.view) * vec4(0.0, 0.0, 0.0, 1.0));
+    vec3 ndcDir = vec3(uv * 2.0 - 1.0, 1.0);
+    vec3 viewDir = (inverse(C.projection) * vec4(ndcDir, 1.0)).xyz;
+    vec3 worldDir = normalize((inverse(C.view) * vec4(viewDir, 0.0)).xyz);
 
     // Fire primary ray
     Ray ray;
     ray.origin = CameraOrigin;
-    ray.direction = LowerLeftCorner + outUv.x * HorizontalSpan + outUv.y * VerticalSpan;
-    ray.direction = (C.view * vec4(ray.direction, 0)).xyz;
+    ray.direction = worldDir;
     Intersection primaryHit = tracePrimaryRay(ray);
 
     // Write out
     imageStore(i_visibility, ivec2(Gid), uvec4(primaryHit.primitiveId));
 
-    vec3 CameraDirection = vec3(C.view * vec4(0.0, -FocalLength, 0.0, 0.0));
-    float linearDepth = dot(primaryHit.position - ray.origin, CameraDirection);
-    imageStore(i_depth, ivec2(Gid), vec4(linearDepth));
+    vec4 projectedHit = C.projection * C.view * vec4(primaryHit.position, 1.0);
+    projectedHit /= projectedHit.w;
+    imageStore(i_depth, ivec2(Gid), vec4(projectedHit.z));
 
     vec3 normal;
     if (primaryHit.primitiveId != -1u)
@@ -76,9 +68,7 @@ void main() {
         normal = ray.direction;
     imageStore(i_normal, ivec2(Gid), vec4(normal, 0.0));
 
-    vec3 hitPos = primaryHit.position;
-    vec3 prevViewSpaceHit = vec3(inverse(C.prevView) * vec4(hitPos, 1.0));
-    vec2 prevViewportPos = (prevViewSpaceHit / (prevViewSpaceHit.y * -FocalLength)).xz;
-    vec2 prevUv = prevViewportPos / ViewportSize + 0.5;
-    imageStore(i_motion, ivec2(Gid), vec4((outUv - prevUv) / OutPitch, 0.0, 0.0));
+    vec4 prevProjectedHit = C.projection * C.prevView * vec4(primaryHit.position, 1.0);
+    prevProjectedHit /= prevProjectedHit.w;
+    imageStore(i_motion, ivec2(Gid), vec4((projectedHit.xy - prevProjectedHit.xy) / OutPitch, 0.0, 0.0));
 }

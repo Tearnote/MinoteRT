@@ -14,7 +14,7 @@ layout(binding = 3) uniform sampler2D s_blueNoise;
 layout(binding = 4) restrict writeonly uniform image2D i_color;
 layout(binding = 5) uniform Constants {
 	mat4 view;
-	float vFov;
+	mat4 projection;
 	uint frameCounter;
 } C;
 
@@ -67,34 +67,23 @@ void main() {
 	// Output details
 	const uvec2 Gid = gl_GlobalInvocationID.xy;
 	const uvec2 OutBounds = uvec2(textureSize(s_visibility, 0));
+	const vec2 OutPitch = vec2(1.0) / vec2(OutBounds);
 	if (any(greaterThanEqual(Gid, OutBounds))) return;
 
-	const vec2 OutPitch = vec2(1.0) / vec2(OutBounds);
-	vec2 outUv = (vec2(Gid) + 0.5) * OutPitch;
-	outUv.y = 1.0 - outUv.y;
-
-	// Viewport
-	const float AspectRatio = float(OutBounds.x) / float(OutBounds.y);
-	const float FocalLength = 1.0;
-	const float ViewportHeight = 2.0 * tan(C.vFov / 2.0);
-	const float ViewportWidth = AspectRatio * ViewportHeight;
-	const vec2 ViewportSize = { ViewportWidth, ViewportHeight };
-
-	// Camera
-	const vec3 HorizontalSpan = { ViewportSize.x, 0.0, 0.0 };
-	const vec3 VerticalSpan = { 0.0, 0.0, ViewportSize.y };
-	const vec3 LowerLeftCorner = vec3(0.0) - HorizontalSpan / 2.0 - VerticalSpan / 2.0 - vec3(0.0, FocalLength, 0.0);
-	const vec3 CameraOrigin = vec3(C.view * vec4(0.0, 0.0, 0.0, 1.0));
+	// Transformations
+	vec2 uv = (vec2(Gid) + 0.5) * OutPitch;
+	uv.y = 1.0 - uv.y;
+	const vec3 CameraOrigin = vec3(inverse(C.view) * vec4(0.0, 0.0, 0.0, 1.0));
 
 	// Reconstruct primary hit
 	Intersection primaryHit;
 	primaryHit.primitiveId = texelFetch(s_visibility, ivec2(Gid), 0).x;
 	primaryHit.normal = texelFetch(s_normal, ivec2(Gid), 0).xyz;
-	float linearDepth = texelFetch(s_depth, ivec2(Gid), 0).x;
-	vec2 cameraUv = (outUv * 2.0 - 1.0) * (ViewportSize / 2.0);
-	vec2 uvScaled = cameraUv * (linearDepth / FocalLength);
-	vec3 viewPosition = {uvScaled.x, -linearDepth, uvScaled.y};
-	primaryHit.position = vec3(C.view * vec4(viewPosition, 1.0));
+	float depth = texelFetch(s_depth, ivec2(Gid), 0).x;
+	vec3 ndcPos = vec3(uv * 2.0 - 1.0, depth);
+	vec4 viewPos = inverse(C.projection) * vec4(ndcPos, 1.0);
+	viewPos.xyz /= viewPos.w;
+	primaryHit.position = (inverse(C.view) * vec4(viewPos.xyz, 1.0)).xyz;
 	primaryHit.t = length(primaryHit.position - CameraOrigin);
 	uint seed = (C.frameCounter << 1u) | 1u;
 	vec2 rotation = texelFetch(s_blueNoise, ivec2(Gid) % textureSize(s_blueNoise, 0), 0).xy;

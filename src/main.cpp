@@ -14,6 +14,7 @@
 auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 
 	using namespace minote; // main itself cannot be namespaced
+    using namespace math_literals;
 
 	// Initializing basic output
 	sys::Glfw::setThreadName("main");
@@ -27,8 +28,8 @@ auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 	auto vulkan = sys::s_vulkan.provide();
 	auto renderer = gfx::Renderer();
 	auto camera = gfx::Camera{
-		.position = {0.0f, 1.0f, 0.0f},
-		.yaw = 0.0f,
+		.position = {0.0f, -1.0f, 0.0f},
+		.yaw = 270_deg,
 		.pitch = 0.0f,
 		.lookSpeed = 1.0f / 256.0f,
 		.moveSpeed = 8.0f,

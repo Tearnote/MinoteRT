@@ -1179,39 +1179,36 @@ constexpr auto look(vec<3, Prec> _pos, vec<3, Prec> _dir, vec<3, Prec> _up) -> m
 
 	auto result = mat<4, Prec>::identity();
 
-	auto s = normalize(cross(_up, _dir));
-	auto u = cross(_dir, s);
+	auto s = normalize(cross(_dir, _up));
+	auto u = cross(s, _dir);
 	result[0][0] = s[0];
 	result[1][0] = s[1];
 	result[2][0] = s[2];
 	result[0][1] = u[0];
 	result[1][1] = u[1];
 	result[2][1] = u[2];
-	result[0][2] = _dir[0];
-	result[1][2] = _dir[1];
-	result[2][2] = _dir[2];
+	result[0][2] = -_dir[0];
+	result[1][2] = -_dir[1];
+	result[2][2] = -_dir[2];
 	result[3][0] = -dot(s, _pos);
 	result[3][1] = -dot(u, _pos);
-	result[3][2] = -dot(_dir, _pos);
-	return inverse(result);
+	result[3][2] = dot(_dir, _pos);
+	return result;
 
 }
 
 template<std::floating_point Prec>
 constexpr auto perspective(Prec _vFov, Prec _aspectRatio, Prec _zNear) -> mat<4, Prec> {
 
-	auto range = tan(_vFov / Prec(2)) * _zNear;
-	auto left = -range * _aspectRatio;
-	auto right = range * _aspectRatio;
-	auto bottom = -range;
-	auto top = range;
+	auto h = Prec(1) / tan(Prec(0.5) * _vFov);
+	auto w = h * _aspectRatio;
 
 	auto result = mat<4, Prec>();
 	result.fill(0);
-	result[0][0] = (Prec(2) * _zNear) / (right - left);
-	result[1][1] = (Prec(2) * _zNear) / (top - bottom);
+	result[0][0] = w;
+	result[1][1] = h;
 	result[2][3] = Prec(1);
-	result[3][2] = Prec(2) * _zNear;
+	result[3][2] = _zNear;
 	return result;
 
 }

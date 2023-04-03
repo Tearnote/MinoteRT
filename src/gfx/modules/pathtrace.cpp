@@ -76,16 +76,17 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 
 			struct Constants {
 				mat4 view;
+				mat4 projection;
 				mat4 prevView;
 				uint frameCounter;
-				float vFov;
 			};
+			auto colorSize = cmd.get_resource_image_attachment("visibility/blank").value().extent.extent;
 			auto* constants = cmd.map_scratch_buffer<Constants>(0, 4);
 			*constants = Constants{
 				.view = _camera.view(),
+				.projection = perspective(60_deg, float(colorSize.height) / float(colorSize.width), 0.01f),
 				.prevView = _prevCamera.view(),
 				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
-				.vFov = 60_deg,
 			};
 
 			cmd.dispatch_invocations(_size.x(), _size.y());
@@ -143,19 +144,19 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueN
 				.bind_image(0, 3, *_blueNoise.view, vuk::ImageLayout::eShaderReadOnlyOptimal).bind_sampler(0, 3, NearestClamp)
 				.bind_image(0, 4, "color/blank");
 
+			auto colorSize = cmd.get_resource_image_attachment("color/blank").value().extent.extent;
 			struct Constants {
 				mat4 view;
-				float vFov;
+				mat4 projection;
 				uint frameCounter;
 			};
 			auto* constants = cmd.map_scratch_buffer<Constants>(0, 5);
 			*constants = Constants{
 				.view = _camera.view(),
-				.vFov = 60_deg,
+				.projection = perspective(60_deg, float(colorSize.height) / float(colorSize.width), 0.01f),
 				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
 			};
 
-			auto colorSize = cmd.get_resource_image_attachment("color/blank").value().extent.extent;
 			cmd.dispatch_invocations(colorSize.width, colorSize.height);
 		},
 	});

@@ -16,9 +16,7 @@ auto Camera::direction() const -> vec3 {
 
 auto Camera::view() const -> mat4 {
 
-	return mat4::translate(position) *
-		mat4::rotate({0.0f, 0.0f, 1.0f}, -yaw) *
-		mat4::rotate({1.0f, 0.0f, 0.0f}, -pitch);
+    return look(position, direction(), vec3{0.0f, 0.0f, 1.0f});
 
 }
 
@@ -41,7 +39,7 @@ void Camera::shift(vec3 distance) {
 
 void Camera::roam(vec3 distance) {
 
-	distance = vec3(view() * vec4(distance, 0.0));
+	distance = vec3(inverse(view()) * vec4(distance, 0.0));
 	shift(distance);
 
 }
