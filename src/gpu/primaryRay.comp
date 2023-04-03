@@ -14,6 +14,8 @@ layout(binding = 3) restrict writeonly uniform image2D i_motion;
 layout(binding = 4) uniform Constants {
     mat4 view;
     mat4 projection;
+    mat4 invView;
+    mat4 invProjection;
     mat4 prevView;
     uint frameCounter;
 } C;
@@ -43,10 +45,10 @@ void main() {
     // Transformations
     vec2 uv = (vec2(Gid) + 0.5) * OutPitch;
     uv.y = 1.0 - uv.y;
-    const vec3 CameraOrigin = vec3(inverse(C.view) * vec4(0.0, 0.0, 0.0, 1.0));
+    const vec3 CameraOrigin = vec3(C.invView * vec4(0.0, 0.0, 0.0, 1.0));
     vec3 ndcDir = vec3(uv * 2.0 - 1.0, 1.0);
-    vec3 viewDir = (inverse(C.projection) * vec4(ndcDir, 1.0)).xyz;
-    vec3 worldDir = normalize((inverse(C.view) * vec4(viewDir, 0.0)).xyz);
+    vec3 viewDir = (C.invProjection * vec4(ndcDir, 1.0)).xyz;
+    vec3 worldDir = normalize((C.invView * vec4(viewDir, 0.0)).xyz);
 
     // Fire primary ray
     Ray ray;

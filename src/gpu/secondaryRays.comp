@@ -15,6 +15,8 @@ layout(binding = 4) restrict writeonly uniform image2D i_color;
 layout(binding = 5) uniform Constants {
 	mat4 view;
 	mat4 projection;
+	mat4 invView;
+	mat4 invProjection;
 	uint frameCounter;
 } C;
 
@@ -73,7 +75,7 @@ void main() {
 	// Transformations
 	vec2 uv = (vec2(Gid) + 0.5) * OutPitch;
 	uv.y = 1.0 - uv.y;
-	const vec3 CameraOrigin = vec3(inverse(C.view) * vec4(0.0, 0.0, 0.0, 1.0));
+	const vec3 CameraOrigin = vec3(C.invView * vec4(0.0, 0.0, 0.0, 1.0));
 
 	// Reconstruct primary hit
 	Intersection primaryHit;
@@ -81,9 +83,9 @@ void main() {
 	primaryHit.normal = texelFetch(s_normal, ivec2(Gid), 0).xyz;
 	float depth = texelFetch(s_depth, ivec2(Gid), 0).x;
 	vec3 ndcPos = vec3(uv * 2.0 - 1.0, depth);
-	vec4 viewPos = inverse(C.projection) * vec4(ndcPos, 1.0);
+	vec4 viewPos = C.invProjection * vec4(ndcPos, 1.0);
 	viewPos.xyz /= viewPos.w;
-	primaryHit.position = (inverse(C.view) * vec4(viewPos.xyz, 1.0)).xyz;
+	primaryHit.position = (C.invView * vec4(viewPos.xyz, 1.0)).xyz;
 	primaryHit.t = length(primaryHit.position - CameraOrigin);
 	uint seed = (C.frameCounter << 1u) | 1u;
 	vec2 rotation = texelFetch(s_blueNoise, ivec2(Gid) % textureSize(s_blueNoise, 0), 0).xy;

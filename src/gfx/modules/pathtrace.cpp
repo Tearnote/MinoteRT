@@ -77,14 +77,20 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 			struct Constants {
 				mat4 view;
 				mat4 projection;
+				mat4 invView;
+				mat4 invProjection;
 				mat4 prevView;
 				uint frameCounter;
 			};
 			auto colorSize = cmd.get_resource_image_attachment("visibility/blank").value().extent.extent;
 			auto* constants = cmd.map_scratch_buffer<Constants>(0, 4);
+			mat4 view = _camera.view();
+			mat4 projection = perspective(60_deg, float(colorSize.height) / float(colorSize.width), 0.01f);
 			*constants = Constants{
-				.view = _camera.view(),
-				.projection = perspective(60_deg, float(colorSize.height) / float(colorSize.width), 0.01f),
+				.view = view,
+				.projection = projection,
+				.invView = inverse(view),
+				.invProjection = inverse(projection),
 				.prevView = _prevCamera.view(),
 				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
 			};
@@ -148,12 +154,18 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueN
 			struct Constants {
 				mat4 view;
 				mat4 projection;
+				mat4 invView;
+				mat4 invProjection;
 				uint frameCounter;
 			};
 			auto* constants = cmd.map_scratch_buffer<Constants>(0, 5);
+			mat4 view = _camera.view();
+			mat4 projection = perspective(60_deg, float(colorSize.height) / float(colorSize.width), 0.01f);
 			*constants = Constants{
-				.view = _camera.view(),
-				.projection = perspective(60_deg, float(colorSize.height) / float(colorSize.width), 0.01f),
+				.view = view,
+				.projection = projection,
+				.invView = inverse(view),
+				.invProjection = inverse(projection),
 				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
 			};
 
