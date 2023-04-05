@@ -28,6 +28,12 @@ auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 	auto vulkan = sys::s_vulkan.provide();
 	auto renderer = gfx::Renderer();
 	auto camera = gfx::Camera{
+		.viewport = {
+			sys::s_vulkan->swapchain->extent.width,
+			sys::s_vulkan->swapchain->extent.height,
+		},
+		.verticalFov = 60_deg,
+		.nearPlane = 1.0f,
 		.position = {0.0f, -1.0f, 0.0f},
 		.yaw = 270_deg,
 		.pitch = 0.0f,

@@ -30,6 +30,10 @@ struct Camera {
 	[[nodiscard]]
 	auto view() const -> mat4;
 
+	// Return a matrix that transforms from view space to clip space
+	[[nodiscard]]
+	auto projection() const -> mat4;
+
 	// Change camera direction by the provided offsets, taking into account lookSpeed
 	void rotate(float horz, float vert);
 

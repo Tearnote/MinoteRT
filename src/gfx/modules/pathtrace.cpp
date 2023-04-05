@@ -85,7 +85,7 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 			auto colorSize = cmd.get_resource_image_attachment("visibility/blank").value().extent.extent;
 			auto* constants = cmd.map_scratch_buffer<Constants>(0, 4);
 			mat4 view = _camera.view();
-			mat4 projection = perspective(60_deg, float(colorSize.height) / float(colorSize.width), 1.0f);
+			mat4 projection = _camera.projection();
 			*constants = Constants{
 				.view = view,
 				.projection = projection,
@@ -160,7 +160,7 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueN
 			};
 			auto* constants = cmd.map_scratch_buffer<Constants>(0, 5);
 			mat4 view = _camera.view();
-			mat4 projection = perspective(60_deg, float(colorSize.height) / float(colorSize.width), 1.0f);
+			mat4 projection = _camera.projection();
 			*constants = Constants{
 				.view = view,
 				.projection = projection,
