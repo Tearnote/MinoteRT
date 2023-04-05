@@ -5,6 +5,7 @@
 #include <imgui.h>
 
 #include "sys/glfw.hpp"
+#include "gfx/renderer.hpp"
 
 namespace minote {
 
@@ -50,9 +51,8 @@ void Freecam::registerEvents() {
 void Freecam::updateCamera(gfx::Camera& _camera) {
 
 	// Get framerate independence multiplier
-//	auto framerateScale = std::min(144.0f / s_renderer->fps(), 8.0f);
-	auto framerateScale = 144.0f;
-	_camera.moveSpeed = 1_m / 16.0f * framerateScale;
+	auto framerateScale = std::min(144.0f * gfx::s_renderer->frameTime(), 8.0f);
+	_camera.moveSpeed = 0.01f / framerateScale;
 
 	offset.y() *= -1; // Y points down in window coords but up in the world
 

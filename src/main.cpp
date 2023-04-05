@@ -26,7 +26,7 @@ auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 	// Initializing subsystems
 	auto glfw = sys::s_glfw.provide("MinoteRT");
 	auto vulkan = sys::s_vulkan.provide();
-	auto renderer = gfx::Renderer();
+	auto renderer = gfx::s_renderer.provide();
 	auto camera = gfx::Camera{
 		.viewport = {
 			sys::s_vulkan->swapchain->extent.width,
@@ -52,7 +52,7 @@ auto WinMain(HINSTANCE, HINSTANCE, LPSTR, int) -> int try {
 		freecam.updateCamera(camera);
 
 		// Draw the next frame
-		renderer.draw(camera);
+		gfx::s_renderer->draw(camera);
 
 	}
 

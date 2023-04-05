@@ -5,6 +5,7 @@
 
 #include "types.hpp"
 #include "stx/time.hpp"
+#include "util/service.hpp"
 #include "gfx/camera.hpp"
 #include "gfx/imgui.hpp"
 
@@ -20,9 +21,14 @@ public:
 	constexpr static auto InflightFrames = 3u;
 	static constexpr auto FrameTimeUpdate = 1_s;
 
-	Renderer();
-
 	void draw(gfx::Camera const&);
+
+	[[nodiscard]]
+	auto frameTime() const -> float { return m_frameTime; }
+
+	// Not movable, not copyable
+	Renderer(Renderer const&) = delete;
+	auto operator=(Renderer const&) -> Renderer& = delete;
 
 private:
 
@@ -37,11 +43,17 @@ private:
 
 	vuk::Texture m_blueNoise;
 
+	// Can only be used as service
+	friend struct util::Service<Renderer>;
+	Renderer();
+
 	void updateFrameTime();
 	auto denoise(vuk::Future color, vuk::Future depth, vuk::Future normal) -> vuk::Future;
 	auto tonemap(vuk::Future) -> vuk::Future;
 	void blitAndPresent(vuk::Future, vuk::Allocator& _allocator);
 
 };
+
+inline util::Service<Renderer> s_renderer;
 
 }
