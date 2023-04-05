@@ -1179,20 +1179,20 @@ constexpr auto look(vec<3, Prec> _pos, vec<3, Prec> _dir, vec<3, Prec> _up) -> m
 
 	auto result = mat<4, Prec>::identity();
 
-	auto s = normalize(cross(_dir, _up));
-	auto u = cross(s, _dir);
-	result[0][0] = s[0];
-	result[1][0] = s[1];
-	result[2][0] = s[2];
+	auto s = normalize(cross(_up, _dir));
+	auto u = cross(_dir, s);
+	result[0][0] = -s[0];
+	result[1][0] = -s[1];
+	result[2][0] = -s[2];
 	result[0][1] = u[0];
 	result[1][1] = u[1];
 	result[2][1] = u[2];
-	result[0][2] = -_dir[0];
-	result[1][2] = -_dir[1];
-	result[2][2] = -_dir[2];
-	result[3][0] = -dot(s, _pos);
+	result[0][2] = _dir[0];
+	result[1][2] = _dir[1];
+	result[2][2] = _dir[2];
+	result[3][0] = dot(s, _pos);
 	result[3][1] = -dot(u, _pos);
-	result[3][2] = dot(_dir, _pos);
+	result[3][2] = -dot(_dir, _pos);
 	return result;
 
 }

@@ -57,7 +57,7 @@ void Freecam::updateCamera(gfx::Camera& _camera) {
 	offset.y() *= -1; // Y points down in window coords but up in the world
 
 	if (moving)
-		_camera.rotate(-offset.x(), -offset.y());
+		_camera.rotate(offset.x(), offset.y());
 	offset = vec2(0.0f); // Lateral movement applied, reset
 
 	_camera.roam({

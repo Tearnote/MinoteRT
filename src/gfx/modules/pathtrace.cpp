@@ -82,7 +82,6 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 				mat4 prevView;
 				uint frameCounter;
 			};
-			auto colorSize = cmd.get_resource_image_attachment("visibility/blank").value().extent.extent;
 			auto* constants = cmd.map_scratch_buffer<Constants>(0, 4);
 			mat4 view = _camera.view();
 			mat4 projection = _camera.projection();
