@@ -8,7 +8,7 @@
 
 namespace minote::gfx::modules {
 
-auto denoiseBilateral(vuk::Future _color, vuk::Future _depth, vuk::Future _normal, BilateralParams _params) -> vuk::Future {
+auto denoiseBilateral(vuk::Future _color, vuk::Future _depth, vuk::Future _normal, Camera const& _camera, BilateralParams _params) -> vuk::Future {
 
 	static auto compiled = false;
 	if (!compiled) {
@@ -43,7 +43,7 @@ auto denoiseBilateral(vuk::Future _color, vuk::Future _depth, vuk::Future _norma
 			"normal"_image >> vuk::eComputeSampled,
 			"output/blank"_image >> vuk::eComputeWrite >> "output",
 		},
-		.execute = [_params](vuk::CommandBuffer& cmd) {
+		.execute = [&_camera, _params](vuk::CommandBuffer& cmd) {
 			cmd.bind_compute_pipeline("denoise/bilateral")
 				.bind_image(0, 0, "color").bind_sampler(0, 0, LinearClamp)
 				.bind_image(0, 1, "depth").bind_sampler(0, 1, LinearClamp)
@@ -54,12 +54,14 @@ auto denoiseBilateral(vuk::Future _color, vuk::Future _depth, vuk::Future _norma
 				float sigma;
 				float kSigma;
 				float threshold;
+				float nearPlane;
 				uint frameCounter;
 			};
 			cmd.push_constants(vuk::ShaderStageFlagBits::eCompute, 0, Constants{
 				.sigma = _params.sigma,
 				.kSigma = _params.kSigma,
 				.threshold = _params.threshold,
+				.nearPlane = _camera.nearPlane,
 				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
 			});
 

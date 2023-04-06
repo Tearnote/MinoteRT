@@ -13,6 +13,7 @@ layout(push_constant) uniform Constants {
     float sigma;
     float kSigma;
     float threshold;
+    float nearPlane;
     uint frameCounter;
 } C;
 
@@ -46,7 +47,7 @@ vec4 smartDeNoise(sampler2D tex, sampler2D depthTex, sampler2D normTex, vec2 uv,
             vec4 walkPx =  texture(tex,uv+d/size);
             float walkZ =  texture(depthTex,uv+d/size).x;
             vec3 walkN =  texture(normTex,uv+d/size).xyz;
-            float dZ = 1.0 / walkZ - 1.0 / centrZ;
+            float dZ = C.nearPlane / walkZ - C.nearPlane / centrZ;
             float dN = dot(walkN, centrN);
             float deltaFactor = exp(clamp((dN - dZ*dZ), 0.0, 1.0) * invThresholdSqx2) * invThresholdSqrt2PI * blurFactor;
 

@@ -48,7 +48,7 @@ private:
 	Renderer();
 
 	void updateFrameTime();
-	auto denoise(vuk::Future color, vuk::Future depth, vuk::Future normal) -> vuk::Future;
+	auto denoise(vuk::Future color, vuk::Future depth, vuk::Future normal, Camera const&) -> vuk::Future;
 	auto tonemap(vuk::Future) -> vuk::Future;
 	void blitAndPresent(vuk::Future, vuk::Allocator& _allocator);
 

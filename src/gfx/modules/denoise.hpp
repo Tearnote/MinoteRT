@@ -5,6 +5,7 @@
 #include <vuk/Future.hpp>
 
 #include "types.hpp"
+#include "gfx/camera.hpp"
 
 namespace minote::gfx::modules {
 
@@ -22,6 +23,6 @@ struct BilateralParams {
 	}
 };
 
-auto denoiseBilateral(vuk::Future color, vuk::Future depth, vuk::Future normal, BilateralParams) -> vuk::Future;
+auto denoiseBilateral(vuk::Future color, vuk::Future depth, vuk::Future normal, Camera const&, BilateralParams) -> vuk::Future;
 
 }
