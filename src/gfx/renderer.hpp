@@ -19,7 +19,7 @@ class Renderer {
 public:
 
 	constexpr static auto InflightFrames = 3u;
-	static constexpr auto FrameTimeUpdate = 1_s;
+	static constexpr auto FrameTimeUpdate = 0.25_s;
 
 	void draw(gfx::Camera const&);
 
