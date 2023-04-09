@@ -32,6 +32,7 @@ vec4 smartDeNoise(sampler2D tex, sampler2D depthTex, sampler2D normTex, vec2 uv,
 
     vec4 centrPx = texture(tex,uv);
     float centrZ = texture(depthTex,uv).x;
+    if (centrZ < 0.0) return centrPx;
     vec3 centrN = texture(normTex,uv).xyz;
 
     float zBuff = 0.0;
