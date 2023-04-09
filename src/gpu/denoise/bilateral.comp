@@ -49,6 +49,7 @@ vec4 smartDeNoise(sampler2D tex, sampler2D depthTex, sampler2D normTex, vec2 uv,
             float walkZ =  texture(depthTex,uv+d/size).x;
             vec3 walkN =  texture(normTex,uv+d/size).xyz;
             float dZ = C.nearPlane / walkZ - C.nearPlane / centrZ;
+            dZ *= 100.0; // manual strength adjustment
             float dN = dot(walkN, centrN);
             float deltaFactor = exp(clamp((dN - dZ*dZ), 0.0, 1.0) * invThresholdSqx2) * invThresholdSqrt2PI * blurFactor;
 
