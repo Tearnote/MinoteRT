@@ -53,8 +53,8 @@ vec3 skyColor(vec3 dir) {
 	bool intersectGround = (raySphereIntersectNearest(worldPos, dir, vec3(0.0), u_atmo.bottomRadius) >= 0.0);
 	skyViewLutParamsToUv(intersectGround, viewZenithCosAngle, lightViewCosAngle, textureSize(s_skyView, 0), viewHeight, uv, u_atmo.bottomRadius);
 	vec3 skyView = textureLod(s_skyView, uv, 0.0).rgb;
-		vec3 sun = getSunLuminance(worldPos, dir, sunDirection, sunIlluminance)
-			* (120000.0 / sunIlluminance);
+	vec3 sun = getSunLuminance(worldPos, dir, sunDirection, sunIlluminance)
+		* (120000.0 / sunIlluminance);
 
 	return skyView + sun;
 }
@@ -127,11 +127,11 @@ void main() {
 	vec2 rotation = texelFetch(s_blueNoise, ivec2(Gid) % textureSize(s_blueNoise, 0), 0).xy;
 
 	// Fire secondary rays
-	const uint Samples = 1u;
-	const uint Bounces = 2u;
+	const uint Samples = 8u;
+	const uint Bounces = 8u;
 	vec3 color = vec3(0.0);
 	for (uint i = 0u; i < Samples; i += 1u)
-		color += tonemap(traceSecondaryRays(primaryHit, Bounces, seed, rotation));
+		color += tonemap(traceSecondaryRays(primaryHit, Bounces + 1u, seed, rotation));
 	color /= Samples;
 	imageStore(i_color, ivec2(Gid), vec4(tonemapInvert(color), 1.0));
 }
