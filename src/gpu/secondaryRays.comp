@@ -9,6 +9,7 @@
 #include "sky/skyTypes.glsl"
 
 #define U_ATMO u_atmo
+#define S_TRANSMITTANCE s_transmittance
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
@@ -16,12 +17,13 @@ layout(binding = 0) uniform usampler2D s_visibility;
 layout(binding = 1) uniform sampler2D s_depth;
 layout(binding = 2) uniform sampler2D s_normal;
 layout(binding = 3) uniform sampler2D s_blueNoise;
-layout(binding = 4) uniform sampler2D s_skyView;
-layout(binding = 5) uniform Atmosphere {
+layout(binding = 4) uniform sampler2D S_TRANSMITTANCE;
+layout(binding = 5) uniform sampler2D s_skyView;
+layout(binding = 6) uniform Atmosphere {
 	AtmosphereParams U_ATMO;
 };
-layout(binding = 6) restrict writeonly uniform image2D i_color;
-layout(binding = 7) uniform Constants {
+layout(binding = 7) restrict writeonly uniform image2D i_color;
+layout(binding = 8) uniform Constants {
 	mat4 view;
 	mat4 projection;
 	mat4 invView;
@@ -41,6 +43,7 @@ vec3 skyColor(vec3 dir) {
 	float viewHeight = length(worldPos);
 
 	const vec3 sunDirection = {-0.435286462f, 0.818654716f, 0.374606609f};
+	const vec3 sunIlluminance = vec3(8.0f);
 	vec3 sideVector = normalize(cross(upVector, dir)); // assumes non parallel vectors
 	vec3 forwardVector = normalize(cross(sideVector, upVector)); // aligns toward the sun light but perpendicular to up vector
 	vec2 lightOnPlane = vec2(dot(sunDirection, forwardVector), dot(sunDirection, sideVector));
@@ -50,11 +53,10 @@ vec3 skyColor(vec3 dir) {
 	bool intersectGround = (raySphereIntersectNearest(worldPos, dir, vec3(0.0), u_atmo.bottomRadius) >= 0.0);
 	skyViewLutParamsToUv(intersectGround, viewZenithCosAngle, lightViewCosAngle, textureSize(s_skyView, 0), viewHeight, uv, u_atmo.bottomRadius);
 	vec3 skyView = textureLod(s_skyView, uv, 0.0).rgb;
-	//	vec3 sun = getSunLuminance(worldPos, worldDir, u_world.sunDirection, u_world.sunIlluminance)
-	//		* (120000.0 / u_world.sunIlluminance);
+		vec3 sun = getSunLuminance(worldPos, dir, sunDirection, sunIlluminance)
+			* (120000.0 / sunIlluminance);
 
-	//	return skyView + sun;
-	return skyView;
+	return skyView + sun;
 }
 
 float rotatedRandom(inout uint state, float rotation) {

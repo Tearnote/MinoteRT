@@ -124,6 +124,7 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, Atmosphere const& _a
 	rg->attach_in("visibility", std::move(_gbuffer.visibility));
 	rg->attach_in("depth", std::move(_gbuffer.depth));
 	rg->attach_in("normal", std::move(_gbuffer.normal));
+	rg->attach_in("transmittance", _atmo.transmittance);
 	rg->attach_in("skyView", std::move(_skyView));
 	rg->attach_in("atmoParams", _atmo.params);
 	rg->attach_image("color/blank", vuk::ImageAttachment{
@@ -141,6 +142,7 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, Atmosphere const& _a
 			"depth"_image >> vuk::eComputeSampled,
 			"normal"_image >> vuk::eComputeSampled,
 			"skyView"_image >> vuk::eComputeSampled,
+			"transmittance"_buffer >> vuk::eComputeSampled,
 			"atmoParams"_buffer >> vuk::eComputeRead,
 			"color/blank"_image >> vuk::eComputeWrite >> "color",
 		},
@@ -150,9 +152,10 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, Atmosphere const& _a
 				.bind_image(0, 1, "depth").bind_sampler(0, 1, NearestClamp)
 				.bind_image(0, 2, "normal").bind_sampler(0, 2, NearestClamp)
 				.bind_image(0, 3, *_blueNoise.view, vuk::ImageLayout::eShaderReadOnlyOptimal).bind_sampler(0, 3, NearestClamp)
-				.bind_image(0, 4, "skyView").bind_sampler(0, 4, LinearRepeat)
-				.bind_buffer(0, 5, "atmoParams")
-				.bind_image(0, 6, "color/blank");
+				.bind_image(0, 4, "transmittance").bind_sampler(0, 4, LinearClamp)
+				.bind_image(0, 5, "skyView").bind_sampler(0, 5, LinearRepeat)
+				.bind_buffer(0, 6, "atmoParams")
+				.bind_image(0, 7, "color/blank");
 
 			auto colorSize = cmd.get_resource_image_attachment("color/blank").value().extent.extent;
 			struct Constants {
@@ -163,7 +166,7 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, Atmosphere const& _a
 				vec3 cameraPos;
 				uint frameCounter;
 			};
-			auto* constants = cmd.map_scratch_buffer<Constants>(0, 7);
+			auto* constants = cmd.map_scratch_buffer<Constants>(0, 8);
 			mat4 view = _camera.view();
 			mat4 projection = _camera.projection();
 			*constants = Constants{
