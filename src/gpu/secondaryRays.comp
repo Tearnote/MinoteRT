@@ -84,6 +84,8 @@ vec3 traceSecondaryRays(Intersection primaryHit, uint maxDepth, inout uint rngSt
 			if (closestHit.primitiveId != -1u) {
 				closestHit.position = rayAt(ray, closestHit.t);
 				closestHit.normal = normalize(closestHit.position - Spheres[closestHit.primitiveId].center);
+			} else {
+				closestHit.normal = ray.direction;
 			}
 		}
 
