@@ -131,7 +131,7 @@ void main() {
 	const uint Bounces = 8u;
 	vec3 color = vec3(0.0);
 	for (uint i = 0u; i < Samples; i += 1u)
-		color += tonemap(traceSecondaryRays(primaryHit, Bounces + 1u, seed, rotation));
+		color += traceSecondaryRays(primaryHit, Bounces + 1u, seed, rotation);
 	color /= Samples;
-	imageStore(i_color, ivec2(Gid), vec4(tonemapInvert(color), 1.0));
+	imageStore(i_color, ivec2(Gid), vec4(color, 1.0));
 }
