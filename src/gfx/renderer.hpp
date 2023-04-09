@@ -43,6 +43,7 @@ private:
 
 	vuk::Texture m_blueNoise;
 
+
 	// Can only be used as service
 	friend struct util::Service<Renderer>;
 	Renderer();

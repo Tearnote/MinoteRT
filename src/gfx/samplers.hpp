@@ -20,6 +20,13 @@ constexpr auto LinearClamp = vuk::SamplerCreateInfo{
 	.addressModeV = vuk::SamplerAddressMode::eClampToEdge,
 };
 
+constexpr auto LinearRepeat = vuk::SamplerCreateInfo{
+	.magFilter = vuk::Filter::eLinear,
+	.minFilter = vuk::Filter::eLinear,
+	.addressModeU = vuk::SamplerAddressMode::eRepeat,
+	.addressModeV = vuk::SamplerAddressMode::eRepeat,
+};
+
 constexpr auto TrilinearClamp = vuk::SamplerCreateInfo{
 	.magFilter = vuk::Filter::eLinear,
 	.minFilter = vuk::Filter::eLinear,

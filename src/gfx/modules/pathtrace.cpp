@@ -7,7 +7,6 @@
 #include <vuk/CommandBuffer.hpp>
 #include <vuk/RenderGraph.hpp>
 
-#include "types.hpp"
 #include "sys/vulkan.hpp"
 #include "gfx/samplers.hpp"
 
@@ -107,7 +106,7 @@ auto primaryRays(uvec2 _size, Camera const& _camera, Camera const& _prevCamera) 
 
 }
 
-auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueNoise) -> vuk::Future {
+auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, Atmosphere const& _atmo, Texture2D<vec3> _skyView, vuk::Texture& _blueNoise) -> vuk::Future {
 
 	static auto compiled = false;
 	if (!compiled) {
@@ -125,6 +124,8 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueN
 	rg->attach_in("visibility", std::move(_gbuffer.visibility));
 	rg->attach_in("depth", std::move(_gbuffer.depth));
 	rg->attach_in("normal", std::move(_gbuffer.normal));
+	rg->attach_in("skyView", std::move(_skyView));
+	rg->attach_in("atmoParams", _atmo.params);
 	rg->attach_image("color/blank", vuk::ImageAttachment{
 		.format = vuk::Format::eR16G16B16A16Sfloat,
 		.sample_count = vuk::Samples::e1,
@@ -139,6 +140,8 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueN
 			"visibility"_image >> vuk::eComputeSampled,
 			"depth"_image >> vuk::eComputeSampled,
 			"normal"_image >> vuk::eComputeSampled,
+			"skyView"_image >> vuk::eComputeSampled,
+			"atmoParams"_buffer >> vuk::eComputeRead,
 			"color/blank"_image >> vuk::eComputeWrite >> "color",
 		},
 		.execute = [&_camera, &_blueNoise](vuk::CommandBuffer& cmd) {
@@ -147,7 +150,9 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueN
 				.bind_image(0, 1, "depth").bind_sampler(0, 1, NearestClamp)
 				.bind_image(0, 2, "normal").bind_sampler(0, 2, NearestClamp)
 				.bind_image(0, 3, *_blueNoise.view, vuk::ImageLayout::eShaderReadOnlyOptimal).bind_sampler(0, 3, NearestClamp)
-				.bind_image(0, 4, "color/blank");
+				.bind_image(0, 4, "skyView").bind_sampler(0, 4, LinearRepeat)
+				.bind_buffer(0, 5, "atmoParams")
+				.bind_image(0, 6, "color/blank");
 
 			auto colorSize = cmd.get_resource_image_attachment("color/blank").value().extent.extent;
 			struct Constants {
@@ -155,9 +160,10 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueN
 				mat4 projection;
 				mat4 invView;
 				mat4 invProjection;
+				vec3 cameraPos;
 				uint frameCounter;
 			};
-			auto* constants = cmd.map_scratch_buffer<Constants>(0, 5);
+			auto* constants = cmd.map_scratch_buffer<Constants>(0, 7);
 			mat4 view = _camera.view();
 			mat4 projection = _camera.projection();
 			*constants = Constants{
@@ -165,6 +171,7 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, vuk::Texture& _blueN
 				.projection = projection,
 				.invView = inverse(view),
 				.invProjection = inverse(projection),
+				.cameraPos = _camera.position,
 				.frameCounter = uint(sys::s_vulkan->context.get_frame_count()),
 			};
 

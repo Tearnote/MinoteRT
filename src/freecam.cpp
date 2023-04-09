@@ -52,7 +52,7 @@ void Freecam::updateCamera(gfx::Camera& _camera) {
 
 	// Get framerate independence multiplier
 	auto framerateScale = std::min(gfx::s_renderer->frameTime(), 0.1f);
-	_camera.moveSpeed = 0.5f * framerateScale;
+	_camera.moveSpeed = 0.0005f * framerateScale;
 
 	offset.y() *= -1; // Y points down in window coords but up in the world
 

@@ -17,6 +17,7 @@
 #include "gfx/modules/pathtrace.hpp"
 #include "gfx/modules/denoise.hpp"
 #include "gfx/modules/tonemap.hpp"
+#include "gfx/modules/sky.hpp"
 
 namespace minote::gfx {
 
@@ -58,8 +59,11 @@ void Renderer::draw(gfx::Camera const& _camera) {
 		m_prevCamera = _camera;
 
 	// Create a rendergraph
+	auto atmosphere = modules::Atmosphere(frameAllocator, modules::Atmosphere::Params::earth());
+	auto sky = modules::Sky();
+	auto skyView = sky.createView(atmosphere, _camera.position);
 	auto gbuffer = modules::primaryRays(outputSize, _camera, m_prevCamera);
-	auto pathtraced = modules::secondaryRays(gbuffer, _camera, m_blueNoise);
+	auto pathtraced = modules::secondaryRays(gbuffer, _camera, atmosphere, skyView, m_blueNoise);
 	auto filtered = denoise(std::move(pathtraced), gbuffer.depth, gbuffer.normal, _camera);
 	auto tonemapped = tonemap(std::move(filtered));
 	auto imgui = m_imgui.render(frameAllocator, std::move(tonemapped));
@@ -99,7 +103,7 @@ auto Renderer::denoise(vuk::Future _color, vuk::Future _depth, vuk::Future _norm
 	});
 
 	// Expose all controls via Imgui
-	static auto denoiseMode = DenoiseMode::Bilateral;
+	static auto denoiseMode = DenoiseMode::None;
 	static auto bilateralParams = modules::BilateralParams::make_default();
 	if (ImGui::CollapsingHeader("Denoiser")) {
 		ImGui::Combo("Algorithm", reinterpret_cast<int*>(&denoiseMode),

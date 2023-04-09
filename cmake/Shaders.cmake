@@ -11,6 +11,9 @@ set(SHADER_SOURCES
 	tonemap/hable.comp
 	tonemap/aces.comp
 	tonemap/amd.comp
+	sky/GenMultiScattering.comp
+	sky/genTransmittance.comp
+	sky/genView.comp
 	secondaryRays.comp
 	primaryRay.comp
 	imgui.vert imgui.frag

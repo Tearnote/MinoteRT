@@ -31,7 +31,9 @@ add_executable(MinoteRT
 	src/gfx/modules/pathtrace.hpp src/gfx/modules/pathtrace.cpp
 	src/gfx/modules/denoise.hpp src/gfx/modules/denoise.cpp
 	src/gfx/modules/tonemap.hpp src/gfx/modules/tonemap.cpp
+	src/gfx/modules/sky.hpp src/gfx/modules/sky.cpp
 	src/gfx/renderer.hpp src/gfx/renderer.cpp
+	src/gfx/resource.hpp
 	src/gfx/camera.hpp src/gfx/camera.cpp
 	src/gfx/imgui.hpp src/gfx/imgui.cpp
 	src/sys/vulkan.hpp src/sys/vulkan.cpp
@@ -48,8 +50,7 @@ add_executable(MinoteRT
 	src/types.hpp
 	src/math.hpp
 	src/main.cpp
-	src/log.hpp src/log.cpp
-)
+	src/log.hpp src/log.cpp)
 target_include_directories(MinoteRT PRIVATE src) # All includes start from src as root
 
 target_link_options(MinoteRT PRIVATE "/SUBSYSTEM:WINDOWS")

@@ -1,9 +1,14 @@
 #version 460
 #pragma shader_stage(compute)
+#extension GL_EXT_debug_printf: enable
 
 #include "intersect.glsl"
 #include "random.glsl"
 #include "scene.glsl"
+#include "sky/skyAccess.glsl"
+#include "sky/skyTypes.glsl"
+
+#define U_ATMO u_atmo
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
@@ -11,18 +16,45 @@ layout(binding = 0) uniform usampler2D s_visibility;
 layout(binding = 1) uniform sampler2D s_depth;
 layout(binding = 2) uniform sampler2D s_normal;
 layout(binding = 3) uniform sampler2D s_blueNoise;
-layout(binding = 4) restrict writeonly uniform image2D i_color;
-layout(binding = 5) uniform Constants {
+layout(binding = 4) uniform sampler2D s_skyView;
+layout(binding = 5) uniform Atmosphere {
+	AtmosphereParams U_ATMO;
+};
+layout(binding = 6) restrict writeonly uniform image2D i_color;
+layout(binding = 7) uniform Constants {
 	mat4 view;
 	mat4 projection;
 	mat4 invView;
 	mat4 invProjection;
+	vec3 cameraPos;
 	uint frameCounter;
 } C;
 
+#include "sky/sky.glsl"
+
 vec3 skyColor(vec3 dir) {
-	float t = 0.5 * (dir.z + 1.0);
-	return (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
+	vec3 worldPos = C.cameraPos + vec3(0.0, 0.0, u_atmo.bottomRadius);
+
+	vec2 uv;
+	vec3 upVector = normalize(worldPos);
+	float viewZenithCosAngle = dot(dir, upVector);
+	float viewHeight = length(worldPos);
+
+	const vec3 sunDirection = {-0.435286462f, 0.818654716f, 0.374606609f};
+	vec3 sideVector = normalize(cross(upVector, dir)); // assumes non parallel vectors
+	vec3 forwardVector = normalize(cross(sideVector, upVector)); // aligns toward the sun light but perpendicular to up vector
+	vec2 lightOnPlane = vec2(dot(sunDirection, forwardVector), dot(sunDirection, sideVector));
+	lightOnPlane = normalize(lightOnPlane);
+	float lightViewCosAngle = lightOnPlane.x;
+
+	bool intersectGround = (raySphereIntersectNearest(worldPos, dir, vec3(0.0), u_atmo.bottomRadius) >= 0.0);
+	skyViewLutParamsToUv(intersectGround, viewZenithCosAngle, lightViewCosAngle, textureSize(s_skyView, 0), viewHeight, uv, u_atmo.bottomRadius);
+	vec3 skyView = textureLod(s_skyView, uv, 0.0).rgb;
+	//	vec3 sun = getSunLuminance(worldPos, worldDir, u_world.sunDirection, u_world.sunIlluminance)
+	//		* (120000.0 / u_world.sunIlluminance);
+
+	//	return skyView + sun;
+	return skyView;
 }
 
 float rotatedRandom(inout uint state, float rotation) {
@@ -36,7 +68,7 @@ vec3 traceSecondaryRays(Intersection primaryHit, uint maxDepth, inout uint rngSt
 		if (i > 0) {
 			// Formulate ray
 			Ray ray;
-			ray.origin = closestHit.position + closestHit.normal * 0.001;
+			ray.origin = closestHit.position + closestHit.normal * 0.000001;
 			ray.direction = normalize(closestHit.normal + randomSpherePoint(vec2(rotatedRandom(rngState, rngRotation.x), rotatedRandom(rngState, rngRotation.y)) * 2.0 - 1.0));
 
 			// Find closest hit
@@ -91,11 +123,11 @@ void main() {
 	vec2 rotation = texelFetch(s_blueNoise, ivec2(Gid) % textureSize(s_blueNoise, 0), 0).xy;
 
 	// Fire secondary rays
-	const uint Samples = 8u;
-	const uint Bounces = 8u;
+	const uint Samples = 1u;
+	const uint Bounces = 2u;
 	vec3 color = vec3(0.0);
 	for (uint i = 0u; i < Samples; i += 1u)
-		color += tonemap(traceSecondaryRays(primaryHit, Bounces - 1u, seed, rotation));
+		color += tonemap(traceSecondaryRays(primaryHit, Bounces, seed, rotation));
 	color /= Samples;
 	imageStore(i_color, ivec2(Gid), vec4(tonemapInvert(color), 1.0));
 }
