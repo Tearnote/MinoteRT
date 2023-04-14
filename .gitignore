@@ -3,3 +3,6 @@ build/*
 
 # IDE config
 .idea/*
+.vs/*
+CMakeSettings.json
+.claudiaideconfig
