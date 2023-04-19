@@ -1,6 +1,5 @@
 #version 460
 #pragma shader_stage(compute)
-#extension GL_EXT_debug_printf: enable
 
 #include "intersect.glsl"
 #include "random.glsl"
@@ -36,7 +35,6 @@ layout(binding = 8) uniform Constants {
 
 vec3 skyColor(vec3 dir) {
 	vec3 worldPos = C.cameraPos + vec3(0.0, 0.0, u_atmo.bottomRadius);
-
 	vec2 uv;
 	vec3 upVector = normalize(worldPos);
 	float viewZenithCosAngle = dot(dir, upVector);
