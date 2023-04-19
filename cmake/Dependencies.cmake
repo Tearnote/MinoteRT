@@ -20,7 +20,7 @@ set(VUK_USE_SHADERC OFF CACHE BOOL "" FORCE)
 set(VUK_FAIL_FAST ON CACHE BOOL "" FORCE)
 FetchContent_Declare(vuk
 	GIT_REPOSITORY https://github.com/martty/vuk
-	GIT_TAG a94873fd50a2f234dd084919c3ceb2d50a415c4b)
+	GIT_TAG 33487722fa1301ccda206bb8be984ca37bb5a3ee)
 FetchContent_MakeAvailable(vuk)
 target_compile_definitions(vuk PUBLIC VUK_CUSTOM_VULKAN_HEADER=<volk.h>)
 target_link_libraries(vuk PRIVATE volk)

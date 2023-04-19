@@ -142,7 +142,7 @@ auto secondaryRays(GBuffer _gbuffer, Camera const& _camera, Atmosphere const& _a
 			"depth"_image >> vuk::eComputeSampled,
 			"normal"_image >> vuk::eComputeSampled,
 			"skyView"_image >> vuk::eComputeSampled,
-			"transmittance"_buffer >> vuk::eComputeSampled,
+			"transmittance"_image >> vuk::eComputeSampled,
 			"atmoParams"_buffer >> vuk::eComputeRead,
 			"color/blank"_image >> vuk::eComputeWrite >> "color",
 		},
