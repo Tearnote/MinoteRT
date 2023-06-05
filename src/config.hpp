@@ -1,9 +1,10 @@
 #pragma once
 
-#include <array>
+import <array>;
+import minote.log;
 
 inline constexpr auto AppTitle = "Minote";
-inline constexpr auto AppVersion = std::to_array({0u, 0u, 0u});
+inline constexpr auto AppVersion = std::to_array({ 0u, 0u, 0u });
 
 // Make sure BUILD_TYPE is specified
 #define BUILD_DEBUG 0
@@ -31,9 +32,9 @@ inline constexpr auto AppVersion = std::to_array({0u, 0u, 0u});
 
 // Level of logging to file and/or console
 #if BUILD_TYPE != BUILD_RELEASE
-#define LOG_LEVEL fmtlog::DBG
+inline constexpr auto LoggingLevel = LogLevel::Debug;
 #else
-#define LOG_LEVEL fmtlog::INF
+inline constexpr auto LoggingLevel = LogLevel::Info;
 #endif
 
 // Whether Vulkan validation layers are enabled
@@ -43,9 +44,9 @@ inline constexpr auto AppVersion = std::to_array({0u, 0u, 0u});
 
 // Logfile location
 #if BUILD_TYPE == BUILD_DEBUG
-inline constexpr auto Log_p = "minote-debug.log";
+inline constexpr auto const* LogfilePath = "minote-debug.log";
 #elif BUILD_TYPE == BUILD_RELDEB
-inline constexpr auto Log_p = "minote-reldeb.log";
+inline constexpr auto const* LogfilePath = "minote-reldeb.log";
 #else
-inline constexpr auto Log_p = "minote.log";
+inline constexpr auto const* LogfilePath = "minote.log";
 #endif

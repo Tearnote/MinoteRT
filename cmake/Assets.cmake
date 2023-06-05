@@ -2,7 +2,8 @@ include_guard()
 
 set(ASSET_DIR_PREFIX assets/)
 set(ASSET_PATHS
-	blue_noise.png)
+	blue_noise.png
+)
 
 foreach(ASSET_PATH ${ASSET_PATHS})
 	set(ASSET_OUTPUT ${PROJECT_BINARY_DIR}/$<CONFIG>/assets/${ASSET_PATH})

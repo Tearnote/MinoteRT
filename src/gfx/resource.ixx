@@ -1,15 +1,11 @@
-#pragma once
+export module minote.resource;
 
-#include <vuk/Future.hpp>
-
-namespace minote::gfx {
+import <vuk/Future.hpp>;
 
 // Some weak typedefs to add semantics to gfx function params
 
-template<typename T>
+export template<typename T>
 using Texture2D = vuk::Future;
 
-template<typename T>
+export template<typename T>
 using Buffer = vuk::Future;
-
-}
